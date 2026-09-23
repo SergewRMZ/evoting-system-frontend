@@ -1,19 +1,12 @@
-import Keycloak from "keycloak-js";
-import { createContext, useEffect, useRef, useState } from "react";
+import {useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import keycloak from "./keycloakConfig";
+import { KeycloakContext } from "./KeycloakContext";
+
 
 interface KeycloakProviderProps {
   children: ReactNode;
 };
-
-interface KeycloakContextType {
-  keycloak: Keycloak | null;
-  loading: boolean;
-  handleLogout: () => void
-};
-
-const KeycloakContext = createContext<KeycloakContextType | null>(null);
 
 export function KeycloakProvider({ children }: KeycloakProviderProps) {
   const [loading, setLoading] = useState(true);
@@ -51,12 +44,19 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
     }
   };
 
+  const handleLogin = async () => {
+    console.log("Ejecutando login");
+    if(keycloak) {
+      await keycloak.login();
+    }
+  }
+
   return (
     <KeycloakContext.Provider
       value={{
-        keycloak,
         loading,
-        handleLogout
+        handleLogout,
+        handleLogin
       }}
     >
       { children }

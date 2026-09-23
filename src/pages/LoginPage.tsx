@@ -1,12 +1,11 @@
 import { LockOutlined, HowToVoteOutlined } from "@mui/icons-material";
 import { Box, Button, Container, Paper, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { useKeycloak } from "../auth/useKeycloak";
 
 function LoginPage() {
-
-  const handleLogin = () => {
-      console.log("Realiza el login");
-  }
+  const { handleLogin } = useKeycloak();
+  
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#101828", display: "flex", alignItems: "center", py: 5 }}>
       <Container maxWidth="sm">
