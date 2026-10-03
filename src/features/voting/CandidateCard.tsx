@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import type { Candidate } from "../elections/electionTypes";
 
-const avatarColors = ["#155eef", "#7f56d9", "#039855", "#dc6803"];
+const avatarColors = ["#6655bf", "#247959", "#8c5c33", "#b14a58"];
 
 function getInitials(candidate: Candidate) {
   return `${candidate.name.trim().charAt(0)}${candidate.lastName.trim().charAt(0)}`.toUpperCase();
@@ -33,10 +33,10 @@ function CandidateCard({
       sx={{
         height: "100%",
         border: "2px solid",
-        borderColor: selected ? "primary.main" : "#eaecf0",
-        bgcolor: selected ? "#f5f8ff" : "white",
+        borderColor: selected ? "primary.main" : "divider",
+        bgcolor: selected ? "rgba(155,138,251,.08)" : "background.paper",
         borderRadius: 3,
-        boxShadow: selected ? "0 0 0 4px rgba(21,94,239,.1)" : "none",
+        boxShadow: selected ? "0 0 0 4px rgba(155,138,251,.12)" : "none",
         transition: "all .2s ease",
       }}
     >

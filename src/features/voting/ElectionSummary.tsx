@@ -34,7 +34,7 @@ function ElectionSummary({ election }: ElectionSummaryProps) {
         <Typography
           variant="overline"
           sx={{
-            color: "primary.main",
+            color: "secondary.main",
             fontWeight: 700,
             letterSpacing: ".12em",
           }}
@@ -67,7 +67,7 @@ function ElectionSummary({ election }: ElectionSummaryProps) {
 
       <Paper
         variant="outlined"
-        sx={{ p: 2, minWidth: { md: 280 }, alignSelf: { md: "end" } }}
+        sx={{ p: 2, minWidth: { md: 280 }, alignSelf: { md: "end" }, borderColor: "divider", bgcolor: "background.paper" }}
       >
         <Typography variant="body2" color="text.secondary">
           Periodo de la elección (UTC)

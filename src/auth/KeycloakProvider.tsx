@@ -47,16 +47,19 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
   const handleLogin = async () => {
     console.log("Ejecutando login");
     if(keycloak) {
-      await keycloak.login();
+      await keycloak.login({ redirectUri: `${window.location.origin}/vote` });
     }
   }
+
+  const getToken = () => keycloak.token ?? null;
 
   return (
     <KeycloakContext.Provider
       value={{
         loading,
         handleLogout,
-        handleLogin
+        handleLogin,
+        getToken
       }}
     >
       { children }

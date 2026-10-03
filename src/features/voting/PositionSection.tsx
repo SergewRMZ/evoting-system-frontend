@@ -20,8 +20,10 @@ function PositionSection({
     <Paper
       sx={{
         p: { xs: 2, md: 4 },
-        border: "1px solid #eaecf0",
-        boxShadow: "0 4px 16px rgba(16,24,40,.04)",
+        border: "1px solid",
+        borderColor: "divider",
+        bgcolor: "background.paper",
+        boxShadow: "0 12px 32px rgba(0,0,0,.12)",
       }}
     >
       <Stack
@@ -39,7 +41,7 @@ function PositionSection({
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Selecciona una candidatura para este puesto
+            Selecciona como máximo una candidatura para este puesto
           </Typography>
         </div>
         <Typography

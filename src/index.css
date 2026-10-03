@@ -13,12 +13,16 @@ body,
 
 body {
   margin: 0;
-  background: #f7f9fc;
-  color: #101828;
+  background: #09090b;
+  color: #f4f3f8;
   -webkit-font-smoothing: antialiased;
 }
 
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
 }

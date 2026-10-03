@@ -4,6 +4,7 @@ interface KeycloakContextType {
   loading: boolean;
   handleLogout: () => void;
   handleLogin: () => void;
+  getToken: () => string | null;
 };
 
 export const KeycloakContext = createContext<KeycloakContextType | null>(null);
