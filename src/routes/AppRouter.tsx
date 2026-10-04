@@ -4,6 +4,7 @@ import HomePage from "../pages/HomePage.tsx";
 import LoginPage from "../pages/LoginPage.tsx";
 import ElectionsPage from "../pages/ElectionsPage.tsx";
 import VotePage from "../pages/VotePage.tsx";
+import { ProtectedRoute } from "../components/ProtectedRoute.tsx";
 
 function AppRouter() {
   return (
@@ -11,8 +12,10 @@ function AppRouter() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/vote" element={<ElectionsPage />} />
-        <Route path="/vote/:electionId" element={<VotePage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/vote" element={<ElectionsPage />} />
+          <Route path="/vote/:electionId" element={<VotePage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

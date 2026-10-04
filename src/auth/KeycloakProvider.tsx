@@ -3,31 +3,33 @@ import type { ReactNode } from "react";
 import keycloak from "./keycloakConfig";
 import { KeycloakContext } from "./KeycloakContext";
 
-
 interface KeycloakProviderProps {
   children: ReactNode;
 };
 
 export function KeycloakProvider({ children }: KeycloakProviderProps) {
   const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
   const initialized = useRef(false);
-  useEffect(() => {
 
+
+  useEffect(() => {
+    // Evita que se ejecute la inicialización de Keycloak más de una vez.
     if(initialized.current) return;
 
     initialized.current = true;
     const initKeycloak = async () => {
       try {
-        await keycloak.init({
+        const authenticated = await keycloak.init({
           onLoad: "check-sso",
           pkceMethod: "S256", // SHA-256
-          silentCheckSsoRedirectUri: `${location.origin}/silent-check-sso.html`,
+          silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
           checkLoginIframe: false
         });
 
-        if(keycloak.authenticated) {
-          console.log(keycloak);
-        }
+        console.log("Keycloak has been initialized.");
+        setAuthenticated(authenticated);
+        console.log(keycloak);
       } catch (error) {
         console.error(`Error: ${error}`);
       } finally {
@@ -38,16 +40,19 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
     initKeycloak();
   },[])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if(keycloak) {
-      keycloak.logout();
+      await keycloak.logout({
+        redirectUri: `${window.location.origin}`
+      });
     }
   };
 
   const handleLogin = async () => {
-    console.log("Ejecutando login");
     if(keycloak) {
-      await keycloak.login({ redirectUri: `${window.location.origin}/vote` });
+      await keycloak.login({ 
+        redirectUri: `${window.location.origin}/vote` 
+      });
     }
   }
 
@@ -57,9 +62,10 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
     <KeycloakContext.Provider
       value={{
         loading,
+        authenticated,
         handleLogout,
         handleLogin,
-        getToken
+        getToken,
       }}
     >
       { children }

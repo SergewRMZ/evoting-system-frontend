@@ -16,8 +16,8 @@ import {
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import { elections } from "../features/elections/electionService";
 import type { ElectionStatus } from "../features/elections/electionTypes";
+import useElections from "../hooks/elections/useElections";
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", {
   dateStyle: "medium",
@@ -26,6 +26,7 @@ const dateFormatter = new Intl.DateTimeFormat("es-MX", {
 
 const statusLabels: Record<ElectionStatus, string> = {
   CREATED: "Programada",
+  PUBLISHED: "Publicada",
   VERIFIED: "Verificada",
   ACTIVE: "Activa",
   CLOSED: "Cerrada",
@@ -33,9 +34,7 @@ const statusLabels: Record<ElectionStatus, string> = {
 };
 
 function ElectionsPage() {
-  const activeElections = elections.filter(
-    (election) => election.status === "ACTIVE",
-  );
+  const { elections } = useElections();
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -62,14 +61,13 @@ function ElectionsPage() {
             lineHeight: 1.05,
           }}
         >
-          Elige una elección para participar.
+          Realiza tu participación de manera anónima.
         </Typography>
         <Typography
           color="text.secondary"
           sx={{ maxWidth: 620, mt: 2, fontSize: "1.05rem", lineHeight: 1.7 }}
         >
-          Revisa las elecciones disponibles. Tu identidad se valida por separado
-          y no queda vinculada con las opciones que elijas.
+          A continuación revisa las elecciones disponibles y selecciona los candidatos de tu preferencia.
         </Typography>
 
         <Stack
@@ -83,7 +81,7 @@ function ElectionsPage() {
           </Typography>
           <Chip
             size="small"
-            label={activeElections.length}
+            label={elections.length}
             sx={{
               ml: 0.5,
               bgcolor: "rgba(114,230,177,.12)",
@@ -93,7 +91,7 @@ function ElectionsPage() {
           />
         </Stack>
 
-        {activeElections.length === 0 ? (
+        {elections.length === 0 ? (
           <Paper
             variant="outlined"
             sx={{ p: { xs: 3, md: 5 }, borderColor: "divider" }}
@@ -105,7 +103,7 @@ function ElectionsPage() {
           </Paper>
         ) : (
           <Grid container spacing={2}>
-            {activeElections.map((election) => (
+            {elections.map((election) => (
               <Grid key={election.electionId} size={{ xs: 12, md: 6 }}>
                 <Paper
                   component={RouterLink}
@@ -207,8 +205,8 @@ function ElectionsPage() {
               Tu voto es solo tuyo
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              La autenticación confirma que puedes participar; la criptografía
-              ayuda a mantener tu elección separada de tu identidad.
+              La autenticación confirma que puedes participar; Se utiliza la criptografía
+              para mantener tu voto anónimo y seguro. Tu elección permanece cifrada.
             </Typography>
           </Box>
         </Paper>

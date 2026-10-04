@@ -47,7 +47,7 @@ function HomePage() {
           overflow: "hidden",
           borderBottom: "1px solid rgba(255,255,255,.08)",
           background:
-            "radial-gradient(ellipse at 78% 22%, rgba(126,104,239,.16), transparent 38%), #09090b",
+            "radial-gradient(ellipse at 78% 22%, rgba(81, 62, 174, 0.16), transparent 38%), #09090b",
         }}
       >
         <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
@@ -72,7 +72,7 @@ function HomePage() {
                 <HowToVoteOutlined />
               </Box>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                VotoClaro
+                Votación Anónima
               </Typography>
             </Stack>
             <Button

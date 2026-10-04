@@ -2,6 +2,7 @@ import { createContext } from "react";
 
 interface KeycloakContextType {
   loading: boolean;
+  authenticated: boolean;
   handleLogout: () => void;
   handleLogin: () => void;
   getToken: () => string | null;

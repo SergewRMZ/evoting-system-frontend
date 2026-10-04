@@ -1,11 +1,13 @@
 export type ElectionStatus =
   | "CREATED"
   | "VERIFIED"
+  | "PUBLISHED"
   | "ACTIVE"
   | "CLOSED"
   | "FINISHED";
 
 export type Candidate = {
+  candidacyId: string;
   candidateId: string;
   name: string;
   lastName: string;
@@ -29,5 +31,8 @@ export type Election = {
   startDate: string;
   endDate: string;
   status: ElectionStatus;
-  positions: ElectionPosition[];
 };
+
+export type ElectionDetails = Election & {
+  positions: ElectionPosition[];
+}
