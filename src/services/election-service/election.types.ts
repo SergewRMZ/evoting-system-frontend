@@ -7,21 +7,22 @@ export type ElectionStatus =
   | "FINISHED";
 
 export type Candidate = {
-  candidacyId: string;
   candidateId: string;
   name: string;
   lastName: string;
   description: string;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+}
+export type Candidacy = {
+  candidacyId: string;
+  candidate: Candidate
 };
 
 export type ElectionPosition = {
   electionPositionId: string;
   positionId: string;
   positionName: string;
-  candidates: Candidate[];
+  candidacies: Candidacy[];
 };
 
 export type Election = {

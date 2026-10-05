@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { type ElectionDetails } from "../../features/elections/electionTypes";
-import { electionApi } from "../../features/elections/election.api";
+import { type ElectionDetails } from "../../services/election-service/election.types";
+import electionServiceApi from "../../services/election-service/election.api";
 
 const useElectionDetails = (electionId: string | undefined) => {
     const [election, setElection] = useState<ElectionDetails | null>(null);
@@ -19,8 +19,9 @@ const useElectionDetails = (electionId: string | undefined) => {
             setError(null);
 
             try {
-                const data = await electionApi.getElectionDetailsById(electionId);
+                const data = await electionServiceApi.getElectionDetailsById(electionId);
                 setElection(data);
+                console.log("Data:", data);
             } catch (error) {
                 if(error instanceof Error) {
                     console.error(error);

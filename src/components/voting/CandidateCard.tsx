@@ -7,43 +7,44 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import type { Candidate } from "../elections/electionTypes";
+import type { Candidacy, Candidate } from "../../services/election-service/election.types";
 
-const avatarColors = ["#6655bf", "#247959", "#8c5c33", "#b14a58"];
+const avatarColors = ["#155eef", "#7f56d9", "#039855", "#dc6803"];
 
-function getInitials(candidate: Candidate) {
-  return `${candidate.name.trim().charAt(0)}${candidate.lastName.trim().charAt(0)}`.toUpperCase();
+function getInitials(candidacy: Candidate) {
+  return `${candidacy.name.trim().charAt(0)}${candidacy.lastName.trim().charAt(0)}`.toUpperCase();
 }
 
 type CandidateCardProps = {
-  candidate: Candidate;
+  candidacy: Candidacy;
   colorIndex: number;
   selected: boolean;
-  onSelect: (candidateId: string) => void;
+  onSelect: (candidacyId: string) => void;
 };
 
 function CandidateCard({
-  candidate,
+  candidacy,
   colorIndex,
   selected,
   onSelect,
 }: CandidateCardProps) {
+  const candidate = candidacy.candidate;
   return (
     <Card
       sx={{
         height: "100%",
         border: "2px solid",
-        borderColor: selected ? "primary.main" : "divider",
-        bgcolor: selected ? "rgba(155,138,251,.08)" : "background.paper",
+        borderColor: selected ? "primary.main" : "primary.contrastText",
+        bgcolor: selected ? "background.paper" : "background.default",
         borderRadius: 3,
-        boxShadow: selected ? "0 0 0 4px rgba(155,138,251,.12)" : "none",
+        boxShadow: selected ? "0 0 0 4px rgba(21,94,239,.1)" : "none",
         transition: "all .2s ease",
       }}
     >
       <CardActionArea
         disabled={!candidate.isActive}
         aria-pressed={selected}
-        onClick={() => onSelect(candidate.candidateId)}
+        onClick={() => onSelect(candidacy.candidacyId)}
         sx={{
           height: "100%",
           p: 2.5,

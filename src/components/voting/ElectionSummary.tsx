@@ -1,5 +1,5 @@
 import { Chip, Paper, Stack, Typography } from "@mui/material";
-import type { ElectionDetails, ElectionStatus } from "../elections/electionTypes";
+import type { ElectionDetails, ElectionStatus } from "../../services/election-service/election.types";
 
 const electionStatusLabels: Record<ElectionStatus, string> = {
   CREATED: "Creada",
@@ -40,7 +40,7 @@ function ElectionSummary({ election }: ElectionSummaryProps) {
             letterSpacing: ".12em",
           }}
         >
-          INFORMACIÓN SOBRE EL PROCESO ELECTORAL
+          INFORMACIÓN SOBRE EL PROCESO ELECTORAL {election.electionId}
         </Typography>
         <Stack
           direction={{ xs: "column", sm: "row" }}

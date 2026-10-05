@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { Election } from "../../features/elections/electionTypes";
-import { electionApi } from "../../features/elections/election.api";
+import type { Election } from "../../services/election-service/election.types";
+import electionServiceApi from "../../services/election-service/election.api";
 
 const useElections = () => {
     const [elections, setElections] = useState<Election[]>([]);
@@ -10,7 +10,7 @@ const useElections = () => {
     useEffect(() => {
         const loadElections = async () => {
             try {
-                const data = await electionApi.getElections();
+                const data = await electionServiceApi.getElections();
                 setElections(data);
             }   catch (error) {
                 console.log(error);

@@ -47,7 +47,7 @@ function HomePage() {
           overflow: "hidden",
           borderBottom: "1px solid rgba(255,255,255,.08)",
           background:
-            "radial-gradient(ellipse at 78% 22%, rgba(81, 62, 174, 0.16), transparent 38%), #09090b",
+            "radial-gradient(ellipse at 60% 40%, rgba(81, 62, 174, 0.36), transparent 38%), #09090b",
         }}
       >
         <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
@@ -111,7 +111,7 @@ function HomePage() {
                   maxWidth: 720,
                 }}
               >
-                Tu voz cuenta. Tu voto es privado.
+                Tu voz cuenta. Tu voto es anónimo.
               </Typography>
               <Typography
                 sx={{

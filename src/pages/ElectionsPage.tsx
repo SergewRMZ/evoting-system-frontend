@@ -16,8 +16,8 @@ import {
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import type { ElectionStatus } from "../features/elections/electionTypes";
-import useElections from "../hooks/elections/useElections";
+import type { ElectionStatus } from "../services/election-service/election.types";
+import useElections from "../hooks/election-service/useElections";
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", {
   dateStyle: "medium",

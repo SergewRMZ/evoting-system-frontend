@@ -1,11 +1,11 @@
 import { Alert, Grid, Paper, Stack, Typography } from "@mui/material";
-import type { ElectionPosition } from "../elections/electionTypes";
+import type { ElectionPosition } from "../../services/election-service/election.types";
 import CandidateCard from "./CandidateCard";
 
 type PositionSectionProps = {
   position: ElectionPosition;
   selectedCandidateId?: string;
-  onCandidateSelect: (
+  onCandidacySelect: (
     electionPositionId: string,
     candidateId: string,
   ) => void;
@@ -14,7 +14,7 @@ type PositionSectionProps = {
 function PositionSection({
   position,
   selectedCandidateId,
-  onCandidateSelect,
+  onCandidacySelect,
 }: PositionSectionProps) {
   return (
     <Paper
@@ -53,23 +53,23 @@ function PositionSection({
         </Typography>
       </Stack>
 
-      {position.candidates.length === 0 ? (
+      {position.candidacies.length === 0 ? (
         <Alert severity="info">
           Este puesto todavía no tiene candidatos registrados.
         </Alert>
       ) : (
         <Grid container spacing={2}>
-          {position.candidates.map((candidate, index) => (
+          {position.candidacies.map((candidacy, index) => (
             <Grid
-              key={candidate.candidateId}
+              key={candidacy.candidacyId}
               size={{ xs: 12, md: 4 }}
             >
               <CandidateCard
-                candidate={candidate}
+                candidacy={candidacy}
                 colorIndex={index}
-                selected={selectedCandidateId === candidate.candidateId}
-                onSelect={(candidateId) =>
-                  onCandidateSelect(position.electionPositionId, candidateId)
+                selected={selectedCandidateId === candidacy.candidacyId}
+                onSelect={(candidacyId) =>
+                  onCandidacySelect(position.electionPositionId, candidacyId)
                 }
               />
             </Grid>
