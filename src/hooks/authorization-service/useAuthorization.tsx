@@ -10,10 +10,6 @@ const useAuthorization = () => {
                 electionId, 
                 blindedMessage
             );
-        }   catch (error) {
-            if (error instanceof Error) {
-                throw error;
-            }
         }   finally {
             setLoading(false);
         }

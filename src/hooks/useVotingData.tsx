@@ -35,9 +35,11 @@ const useVotingData = (electionId: string | undefined) => {
                 setEncryptionPublicKey(encryptionPublicKey);
                 setAuthorizationPublicKey(authorizationPublicKey);
             }   catch (error) {
-                if(error instanceof Error) {
-                    setError(error);
-                }
+                setError(
+                    error instanceof Error
+                        ? error
+                        : new Error("No se pudo cargar la información de la elección."),
+                );
             }   finally {
                 setLoading(false);
             }

@@ -1,5 +1,5 @@
 import { apiClient } from "../../api/apiClient"
-import type { AuthorizationPublicKey } from "./authorization.types";
+import type { AuthorizationPublicKey, BlindSignature } from "./authorization.types";
 
 const authorizationServiceApi = {
     getPublicKey: async (electionId: string): Promise<AuthorizationPublicKey> => {
@@ -10,7 +10,7 @@ const authorizationServiceApi = {
     requestBlindSignature: async(
         electionId: string, 
         blindedMessage: string
-    ) => {
+    ): Promise<BlindSignature> => {
 
         const response = await apiClient.post(`/api/authorization-service/elections/${electionId}/blind-signature`,
             { blindedMessage }

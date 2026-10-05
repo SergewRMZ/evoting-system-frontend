@@ -4,6 +4,7 @@ export type VoteChoice = 0 | 1;
 
 export type VotePayload = {
   electionId: string;
+  authorizationKeysId: string;
   positions: {
     electionPositionId: string;
     ballot: {
@@ -15,6 +16,7 @@ export type VotePayload = {
 
 export type EncryptedVotePayload = {
     electionId: string;
+    authorizationKeysId: string;
     positions: {
         electionPositionId: string;
         ballot: {
