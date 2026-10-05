@@ -2,7 +2,6 @@ import { type EncryptedVotePayload, type VotePayload } from "../../types/vote.ty
 import { type ElectionDetails } from "../../services/election-service/election.types";
 import EllipticCurveElGamal from "../../crypto/ecc-elgamal/ecc.elgamal";
 import {
-    arrayUint8ArrayToBase64,
     base64ToBytes,
     base64UrlToBytes,
     sha384,
@@ -76,15 +75,20 @@ export const createBlindedVoteMessage = async (
     selectedCandidacies: Record<string, string>,
     encryptionPublicKey: EncryptionPublicKey,
     authorizationPublicKey: AuthorizationPublicKey,
-): Promise<string> => {
+) => {
     const votePayload = createVotePayload(
         election,
         selectedCandidacies,
         authorizationPublicKey.authorizationKeysId,
     );
-    const encryptedVote = canonicalize(encryptVote(votePayload, encryptionPublicKey));
-    const voteDigest = await sha384(encryptedVote);
-    const blindedVote = await blindVote(voteDigest, authorizationPublicKey);
+    const encryptedVote: EncryptedVotePayload = encryptVote(votePayload, encryptionPublicKey);
+    const digest: Uint8Array = await sha384(canonicalize(encryptedVote));
+    const blindedVote: JsBlindResult = await blindVote(digest, authorizationPublicKey);
 
-    return arrayUint8ArrayToBase64(blindedVote.blinded_message);
+
+    return {
+        encryptedVote,
+        digest,
+        blindedVote
+    };
 };

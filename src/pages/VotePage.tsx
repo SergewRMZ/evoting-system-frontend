@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { isAxiosError } from "axios";
 import {
   ArrowBack,
   HowToVoteOutlined,
@@ -26,25 +25,11 @@ import FeedbackAlert from "../components/FeedbackAlert";
 import { createBlindedVoteMessage } from "../utils/voting/vote.utils";
 import useVotingData from "../hooks/useVotingData";
 import useAuthorization from "../hooks/authorization-service/useAuthorization";
+import { arrayUint8ArrayToBase64 } from "../crypto/crypto.utils";
 
 type SubmissionFeedback = {
   message: string;
   severity: AlertColor;
-};
-
-const getSubmissionErrorMessage = (error: unknown): string => {
-  if (isAxiosError<{ message?: unknown }>(error)) {
-    if (error.response?.status === 409) {
-      return "Ya emitiste tu voto para esta elección. No puedes solicitar otra autorización.";
-    }
-
-    const serverMessage = error.response?.data?.message;
-    if (typeof serverMessage === "string" && serverMessage.trim()) {
-      return serverMessage;
-    }
-  }
-
-  return "No se pudo autorizar tu voto. Verifica tu conexión e inténtalo nuevamente.";
 };
 
 function VotePage() {
@@ -56,9 +41,12 @@ function VotePage() {
     loading,
     error,
   } = useVotingData(electionId);
+
   const { requestBlindSignature } = useAuthorization();
+
   const [selectedCandidacies, setSelectedCandidacies] =
     useState<Record<string, string>>({});
+    
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionFeedback, setSubmissionFeedback] =
     useState<SubmissionFeedback | null>(null);
@@ -110,7 +98,7 @@ function VotePage() {
     });
 
     try {
-      const blindedMessage = await createBlindedVoteMessage(
+      const {encryptedVote, digest, blindedVote} = await createBlindedVoteMessage(
         election,
         selectedCandidacies,
         encryptionPublicKey,
@@ -121,16 +109,24 @@ function VotePage() {
         severity: "info",
         message: "Tu voto está siendo autorizado. Por favor, espera...",
       });
-      await requestBlindSignature(election.electionId, blindedMessage);
 
+      const blindedMessageBase64 = arrayUint8ArrayToBase64(blindedVote.blinded_message);
+      const data = await requestBlindSignature(
+            election.electionId, 
+            blindedMessageBase64
+        );
+
+      console.log(data);
       setSubmissionFeedback({
         severity: "success",
-        message: "La autorización de tu voto se completó correctamente.",
+        message: "Tu voto ha sido autorizado correctamente",
       });
-    } catch (submissionError) {
+    } catch (error) {
       setSubmissionFeedback({
         severity: "error",
-        message: getSubmissionErrorMessage(submissionError),
+        message: error instanceof Error
+            ? error.message
+            : "Ha ocurrido un error al autorizar tu voto. Inténtalo nuevamente."
       });
     } finally {
       setIsSubmitting(false);
