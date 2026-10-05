@@ -18,5 +18,9 @@ export type AuthorizationPublicKey = {
 }
 
 export type BlindSignature = {
-    blindSignature: string
+    authorizationKeysId: string;
+    blindSignature: string;
+    electionId: string;
+    issuedAt: string;
+    userId: string;
 };

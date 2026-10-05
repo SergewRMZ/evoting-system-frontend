@@ -22,10 +22,8 @@ import ElectionSummary from "../components/voting/ElectionSummary";
 import PositionSection from "../components/voting/PositionSection";
 import LoadingPage from "../components/LoadingPage";
 import FeedbackAlert from "../components/FeedbackAlert";
-import { createBlindedVoteMessage } from "../utils/voting/vote.utils";
 import useVotingData from "../hooks/useVotingData";
 import useAuthorization from "../hooks/authorization-service/useAuthorization";
-import { arrayUint8ArrayToBase64 } from "../crypto/crypto.utils";
 
 type SubmissionFeedback = {
   message: string;
@@ -42,7 +40,7 @@ function VotePage() {
     error,
   } = useVotingData(electionId);
 
-  const { requestBlindSignature } = useAuthorization();
+  const { encryptedVote, signature, authorizeVote } = useAuthorization();
 
   const [selectedCandidacies, setSelectedCandidacies] =
     useState<Record<string, string>>({});
@@ -98,25 +96,13 @@ function VotePage() {
     });
 
     try {
-      const {encryptedVote, digest, blindedVote} = await createBlindedVoteMessage(
-        election,
-        selectedCandidacies,
-        encryptionPublicKey,
-        authorizationPublicKey,
-      );
-
       setSubmissionFeedback({
         severity: "info",
         message: "Tu voto está siendo autorizado. Por favor, espera...",
       });
 
-      const blindedMessageBase64 = arrayUint8ArrayToBase64(blindedVote.blinded_message);
-      const data = await requestBlindSignature(
-            election.electionId, 
-            blindedMessageBase64
-        );
-
-      console.log(data);
+      const signatureBase64 = await authorizeVote(election, selectedCandidacies, encryptionPublicKey, authorizationPublicKey);
+      console.log("Firma digital válida: ", signatureBase64);
       setSubmissionFeedback({
         severity: "success",
         message: "Tu voto ha sido autorizado correctamente",

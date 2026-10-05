@@ -3,13 +3,13 @@ import { type ElectionDetails } from "../../services/election-service/election.t
 import EllipticCurveElGamal from "../../crypto/ecc-elgamal/ecc.elgamal";
 import {
     base64ToBytes,
-    base64UrlToBytes,
     sha384,
 } from "../../crypto/crypto.utils";
 import type { EncryptionPublicKey } from "../../services/tally-service/tally-service.types";
-import init, { JsBlindResult, JsRsaBssaPublicKey } from "../../crypto/rsa-bssa/rsa_bssa";
 import type { AuthorizationPublicKey } from "../../services/authorization-service/authorization.types";
 import { canonicalize } from "json-canonicalize";
+import { RsaBssaClient } from "../../crypto/rsa-bssa/RsaBssaClient";
+import type { JsBlindResult } from "../../crypto/rsa-bssa/rsa_bssa";
 
 export const createVotePayload = (
     election: ElectionDetails,
@@ -61,13 +61,20 @@ export const blindVote = async (
     voteDigest: Uint8Array, 
     authorizationPublicKey: AuthorizationPublicKey
 ): Promise<JsBlindResult> => {
-
-    await init();
-
-    const nBytes: Uint8Array = base64UrlToBytes(authorizationPublicKey.publicKey.n);
-    const eBytes: Uint8Array = base64UrlToBytes(authorizationPublicKey.publicKey.e);
-    const rsaBssa: JsRsaBssaPublicKey = new JsRsaBssaPublicKey(nBytes, eBytes);
+    const rsaBssa = await RsaBssaClient.getInstance(authorizationPublicKey);
     return rsaBssa.blind(voteDigest);
+}
+
+export const unblindVote = async (
+    blindSignature: string, 
+    blindedVote: JsBlindResult,
+    digest: Uint8Array,
+    authorizationPublicKey: AuthorizationPublicKey
+): Promise<Uint8Array> => {
+    const rsaBssa = await RsaBssaClient.getInstance(authorizationPublicKey);
+
+    const jsRsaBssaSignature = await rsaBssa.unblind(blindSignature, blindedVote, digest);
+    return jsRsaBssaSignature.signature;
 }
 
 export const createBlindedVoteMessage = async (
@@ -84,7 +91,6 @@ export const createBlindedVoteMessage = async (
     const encryptedVote: EncryptedVotePayload = encryptVote(votePayload, encryptionPublicKey);
     const digest: Uint8Array = await sha384(canonicalize(encryptedVote));
     const blindedVote: JsBlindResult = await blindVote(digest, authorizationPublicKey);
-
 
     return {
         encryptedVote,
