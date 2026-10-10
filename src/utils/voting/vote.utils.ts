@@ -3,7 +3,9 @@ import { type ElectionDetails } from "../../services/election-service/election.t
 import EllipticCurveElGamal from "../../crypto/ecc-elgamal/ecc.elgamal";
 import {
     base64ToBytes,
-    sha384,
+    base64UrlToBytes,
+    sha3_384Hash,
+    Uint8ArrayToBase64,
 } from "../../crypto/crypto.utils";
 import type { EncryptionPublicKey } from "../../services/tally-service/tally-service.types";
 import type { AuthorizationPublicKey } from "../../services/authorization-service/authorization.types";
@@ -17,9 +19,7 @@ export const createVotePayload = (
     authorizationKeysId: string,
 ): VotePayload => {
   return {
-      electionId: election.electionId,
       authorizationKeysId,
-
       positions: election.positions.map((position) => ({
             electionPositionId: position.electionPositionId,
             ballot: position.candidacies.map((candidacy) => ({
@@ -44,12 +44,11 @@ export const encryptVote = (
     const elGamal = new EllipticCurveElGamal(publicKeyBytes);
 
     return {
-        electionId: vote.electionId,
         authorizationKeysId: vote.authorizationKeysId,
         positions: vote.positions.map((position) => ({
             electionPositionId: position.electionPositionId,
 
-            ballot: position.ballot.map((choice) => ({
+            ballots: position.ballot.map((choice) => ({
                 candidacyId: choice.candidacyId,
                 vote: elGamal.encrypt(BigInt(choice.vote))
             }))
@@ -70,11 +69,10 @@ export const unblindVote = async (
     blindedVote: JsBlindResult,
     digest: Uint8Array,
     authorizationPublicKey: AuthorizationPublicKey
-): Promise<Uint8Array> => {
-    const rsaBssa = await RsaBssaClient.getInstance(authorizationPublicKey);
-
-    const jsRsaBssaSignature = await rsaBssa.unblind(blindSignature, blindedVote, digest);
-    return jsRsaBssaSignature.signature;
+): Promise<string> => {
+    const rsaBssaClient = await RsaBssaClient.getInstance(authorizationPublicKey);
+    const jsRsaBssaSignature = await rsaBssaClient.unblind(base64UrlToBytes(blindSignature), blindedVote, digest);
+    return Uint8ArrayToBase64(jsRsaBssaSignature.signature);
 }
 
 export const createBlindedVoteMessage = async (
@@ -89,12 +87,12 @@ export const createBlindedVoteMessage = async (
         authorizationPublicKey.authorizationKeysId,
     );
     const encryptedVote: EncryptedVotePayload = encryptVote(votePayload, encryptionPublicKey);
-    const digest: Uint8Array = await sha384(canonicalize(encryptedVote));
-    const blindedVote: JsBlindResult = await blindVote(digest, authorizationPublicKey);
-
+    console.log("JSON formateado:", canonicalize(encryptedVote));
+    const digest: Uint8Array = await sha3_384Hash(canonicalize(encryptedVote));
+    const blindResult: JsBlindResult = await blindVote(digest, authorizationPublicKey);
     return {
         encryptedVote,
         digest,
-        blindedVote
+        blindResult
     };
 };

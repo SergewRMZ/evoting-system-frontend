@@ -24,6 +24,7 @@ import LoadingPage from "../components/LoadingPage";
 import FeedbackAlert from "../components/FeedbackAlert";
 import useVotingData from "../hooks/useVotingData";
 import useAuthorization from "../hooks/authorization-service/useAuthorization";
+import type { AuthorizedVote } from "../types/vote.types";
 
 type SubmissionFeedback = {
   message: string;
@@ -40,7 +41,7 @@ function VotePage() {
     error,
   } = useVotingData(electionId);
 
-  const { encryptedVote, signature, authorizeVote } = useAuthorization();
+  const { authorizeVote } = useAuthorization();
 
   const [selectedCandidacies, setSelectedCandidacies] =
     useState<Record<string, string>>({});
@@ -101,8 +102,9 @@ function VotePage() {
         message: "Tu voto está siendo autorizado. Por favor, espera...",
       });
 
-      const signatureBase64 = await authorizeVote(election, selectedCandidacies, encryptionPublicKey, authorizationPublicKey);
-      console.log("Firma digital válida: ", signatureBase64);
+      const authorizedVote: AuthorizedVote = await authorizeVote(election, selectedCandidacies, encryptionPublicKey, authorizationPublicKey);
+      console.log("Voto autorizado: ", JSON.stringify(authorizedVote, null, 2));
+      
       setSubmissionFeedback({
         severity: "success",
         message: "Tu voto ha sido autorizado correctamente",

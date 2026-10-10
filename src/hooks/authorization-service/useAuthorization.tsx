@@ -5,54 +5,60 @@ import type { EncryptionPublicKey } from "../../services/tally-service/tally-ser
 import type { AuthorizationPublicKey } from "../../services/authorization-service/authorization.types";
 import { createBlindedVoteMessage, unblindVote } from "../../utils/voting/vote.utils";
 import type { ElectionDetails } from "../../services/election-service/election.types";
-import { arrayUint8ArrayToBase64 } from "../../crypto/crypto.utils";
-import type { EncryptedVotePayload } from "../../types/vote.types";
+import { Uint8ArrayToBase64 } from "../../crypto/crypto.utils";
+import type { AuthorizedVote } from "../../types/vote.types";
 
 const useAuthorization = () => {
     const[loading, setLoading] = useState(false);
-    const[encryptedVote, setEncryptedVote] = useState<EncryptedVotePayload | null>(null);
-    const[signature, setSignature] = useState<string | null>(null);
 
+    /**
+     * Cifra las opciones para cada boleta y genera el mensaje cegado a partir
+     * del valor hash del contenido del voto una vez que se tienen las opciones cifradas.
+     * @remarks 
+     * El mensaje cegado es generado a partir del esquema criptográfico de firma ciega. 
+     * El randomizer es una cadena de 384 bits que permite generar aleatoriedad al mensaje
+     * de entrada. 
+     */
     const authorizeVote = async (
         election: ElectionDetails, 
         selectedCandidacies: Record<string, string>,
         encryptionPublicKey: EncryptionPublicKey,
         authorizationPublicKey: AuthorizationPublicKey
-    ) => {
+    ): Promise<AuthorizedVote> => {
     
         try {
             setLoading(true);
 
-            // Cifrado y enmascaramiento del voto
-            const { encryptedVote, digest, blindedVote } = await createBlindedVoteMessage(
-                election,
-                selectedCandidacies,
-                encryptionPublicKey,
-                authorizationPublicKey,
-            );
+            const { encryptedVote, digest, blindResult } = 
+                await createBlindedVoteMessage(
+                    election,
+                    selectedCandidacies,
+                    encryptionPublicKey,
+                    authorizationPublicKey,
+                );
 
-            console.log("Voto cifrado: ", encryptedVote);
-            console.log("Digesto del voto: ", digest);
-            console.log("Voto cegado: ", blindedVote);
-            setEncryptedVote(encryptedVote);
-            const blindedMessage = arrayUint8ArrayToBase64(blindedVote.blinded_message);
+            const randomizer = Uint8ArrayToBase64(blindResult.randomizer!);
+            console.log("Factor de desenmascaramiento: ", Uint8ArrayToBase64(blindResult.inv_blind_factor));
+            console.log("Mensaje cegado:", Uint8ArrayToBase64(blindResult.blinded_message));
 
-            // Solicitar firma digital ciega
             const data = await authorizationServiceApi.requestBlindSignature(
                 election.electionId, 
-                blindedMessage
+                Uint8ArrayToBase64(blindResult.blinded_message)
             );
 
-            const signatureBytes = await unblindVote(
+            const signature = await unblindVote(
                 data.blindSignature,
-                blindedVote,
+                blindResult,
                 digest,
                 authorizationPublicKey
             );
 
-            const signatureBase64 = arrayUint8ArrayToBase64(signatureBytes);
-            setSignature(signatureBase64);
-            return signatureBase64;
+            return {
+                encryptedVote,
+                randomizer: randomizer,
+                digest: Uint8ArrayToBase64(digest),
+                signature
+            };
         }   catch(error) {
             if(axios.isAxiosError(error)) {
                 const problemDetails = error.response?.data;
@@ -71,8 +77,6 @@ const useAuthorization = () => {
 
     return {
         loading,
-        encryptedVote,
-        signature,
         authorizeVote,
     }
 }

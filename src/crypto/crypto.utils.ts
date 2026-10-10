@@ -1,3 +1,5 @@
+import { sha3_384 } from '@noble/hashes/sha3.js';
+
 export const base64ToBytes = (base64:string): Uint8Array => {
     const binaryString = atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -18,14 +20,12 @@ export const base64UrlToBytes = (base64Url: string): Uint8Array => {
     return bytes;
 }
 
-export const arrayUint8ArrayToBase64 = (bytes: Uint8Array): string => {
+export const Uint8ArrayToBase64 = (bytes: Uint8Array): string => {
     const binString = String.fromCodePoint(...bytes);
     return btoa(binString);
 }
 
-export const sha384 = async (data: string): Promise<Uint8Array> => {
+export const sha3_384Hash = async (data: string): Promise<Uint8Array> => {
     const buffer = new TextEncoder().encode(data);
-    const hashBuffer = await crypto.subtle.digest("SHA-384", buffer);
-    const array = new Uint8Array(hashBuffer);
-    return array;
+    return sha3_384(buffer);
 }

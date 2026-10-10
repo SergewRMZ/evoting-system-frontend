@@ -4,7 +4,6 @@ import init, {
 } from "./rsa_bssa";
 
 import {
-    base64ToBytes,
     base64UrlToBytes
 } from "../crypto.utils";
 
@@ -12,7 +11,7 @@ import type { AuthorizationPublicKey } from "../../services/authorization-servic
 
 export class RsaBssaClient {
     private static instance: RsaBssaClient | null = null;
-    private static keyId: string | null;
+    private static keyId: string | null = null;
     private readonly rsaBssa: JsRsaBssaPublicKey;
 
     private constructor(rsaBssa: JsRsaBssaPublicKey) {
@@ -40,8 +39,8 @@ export class RsaBssaClient {
                 eBytes
             );
 
-            RsaBssaClient.instance =
-                new RsaBssaClient(rsaBssa);
+            RsaBssaClient.instance = new RsaBssaClient(rsaBssa);
+            RsaBssaClient.keyId = authorizationPublicKey.authorizationKeysId;
         }
 
         return RsaBssaClient.instance;
@@ -52,15 +51,12 @@ export class RsaBssaClient {
     }
 
     async unblind(
-        blindSignature: string,
+        blindSignature: Uint8Array,
         blindResult: JsBlindResult,
         message: Uint8Array,
     ) {
-        const blindSignatureBytes =
-            base64ToBytes(blindSignature);
-
         return this.rsaBssa.unblind(
-            blindSignatureBytes,
+            blindSignature,
             blindResult,
             message
         );
