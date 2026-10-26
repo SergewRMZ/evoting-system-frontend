@@ -33,7 +33,7 @@ export interface EncryptedVotePayload {
     }[];
 };
 
-export interface AuthorizedVote {
+export interface SignedVote {
   encryptedVote: EncryptedVotePayload,
   randomizer: string,
   digest: string,

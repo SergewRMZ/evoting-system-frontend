@@ -6,7 +6,7 @@ import type { AuthorizationPublicKey } from "../../services/authorization-servic
 import { createBlindedVoteMessage, unblindVote } from "../../utils/voting/vote.utils";
 import type { ElectionDetails } from "../../services/election-service/election.types";
 import { Uint8ArrayToBase64 } from "../../crypto/crypto.utils";
-import type { AuthorizedVote } from "../../types/vote.types";
+import type { SignedVote } from "../../types/vote.types";
 
 const useAuthorization = () => {
     const[loading, setLoading] = useState(false);
@@ -24,7 +24,7 @@ const useAuthorization = () => {
         selectedCandidacies: Record<string, string>,
         encryptionPublicKey: EncryptionPublicKey,
         authorizationPublicKey: AuthorizationPublicKey
-    ): Promise<AuthorizedVote> => {
+    ): Promise<SignedVote> => {
     
         try {
             setLoading(true);

@@ -24,7 +24,8 @@ import LoadingPage from "../components/LoadingPage";
 import FeedbackAlert from "../components/FeedbackAlert";
 import useVotingData from "../hooks/useVotingData";
 import useAuthorization from "../hooks/authorization-service/useAuthorization";
-import type { AuthorizedVote } from "../types/vote.types";
+import type { SignedVote } from "../types/vote.types";
+import useBulletinBoard from "../hooks/bulletin-board-service/useBulletinBoard";
 
 type SubmissionFeedback = {
   message: string;
@@ -42,22 +43,19 @@ function VotePage() {
   } = useVotingData(electionId);
 
   const { authorizeVote } = useAuthorization();
+  const { submitVote } = useBulletinBoard();
 
-  const [selectedCandidacies, setSelectedCandidacies] =
-    useState<Record<string, string>>({});
-    
+  const [selectedCandidacies, setSelectedCandidacies] = useState<
+    Record<string, string>
+  >({});
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionFeedback, setSubmissionFeedback] =
     useState<SubmissionFeedback | null>(null);
 
   if (loading) return <LoadingPage />;
 
-  if (
-    error ||
-    !election ||
-    !encryptionPublicKey ||
-    !authorizationPublicKey
-  ) {
+  if (error || !election || !encryptionPublicKey || !authorizationPublicKey) {
     return (
       <Box
         sx={{
@@ -76,10 +74,7 @@ function VotePage() {
     );
   }
 
-  const selectCandidacy = (
-    electionPositionId: string,
-    candidacyId: string,
-  ) => {
+  const selectCandidacy = (electionPositionId: string, candidacyId: string) => {
     setSubmissionFeedback(null);
     setSelectedCandidacies((current) => ({
       ...current,
@@ -88,37 +83,45 @@ function VotePage() {
   };
 
   const prepareVoteSubmission = async () => {
-    if (isSubmitting) return;
+        if (isSubmitting) return;
 
-    setIsSubmitting(true);
-    setSubmissionFeedback({
-      severity: "info",
-      message: "Preparando y cifrando tu voto de forma segura...",
-    });
-
-    try {
-      setSubmissionFeedback({
+        setIsSubmitting(true);
+        setSubmissionFeedback({
         severity: "info",
-        message: "Tu voto está siendo autorizado. Por favor, espera...",
-      });
+        message: "Preparando y cifrando tu voto de forma segura...",
+        });
 
-      const authorizedVote: AuthorizedVote = await authorizeVote(election, selectedCandidacies, encryptionPublicKey, authorizationPublicKey);
-      console.log("Voto autorizado: ", JSON.stringify(authorizedVote, null, 2));
-      
-      setSubmissionFeedback({
-        severity: "success",
-        message: "Tu voto ha sido autorizado correctamente",
-      });
-    } catch (error) {
-      setSubmissionFeedback({
-        severity: "error",
-        message: error instanceof Error
-            ? error.message
-            : "Ha ocurrido un error al autorizar tu voto. Inténtalo nuevamente."
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+        try {
+            setSubmissionFeedback({
+                severity: "info",
+                message: "Tu voto está siendo autorizado. Por favor, espera...",
+            });
+
+            const authorizedVote: SignedVote = await authorizeVote(
+                election,
+                selectedCandidacies,
+                encryptionPublicKey,
+                authorizationPublicKey,
+            );
+
+            console.log("Voto autorizado: ", JSON.stringify(authorizedVote, null, 2));
+            await submitVote(authorizedVote, electionId!);
+            
+            setSubmissionFeedback({
+                severity: "success",
+                message: "Tu voto ha sido emitido correctamente",
+            });
+        } catch (error) {
+            setSubmissionFeedback({
+                severity: "error",
+                message:
+                error instanceof Error
+                    ? error.message
+                    : "Ha ocurrido un error al autorizar tu voto. Inténtalo nuevamente.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
   };
 
   const selectedCount = Object.keys(selectedCandidacies).length;
