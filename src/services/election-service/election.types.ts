@@ -1,4 +1,5 @@
 export type ElectionStatus =
+  | "DRAFT"
   | "CREATED"
   | "VERIFIED"
   | "PUBLISHED"
@@ -7,7 +8,7 @@ export type ElectionStatus =
   | "FINISHED";
 
 export type Candidate = {
-  candidateId: string;
+  id: string;
   name: string;
   lastName: string;
   description: string;
@@ -37,3 +38,14 @@ export type Election = {
 export type ElectionDetails = Election & {
   positions: ElectionPosition[];
 }
+
+export type CreateElectionRequest = Pick<Election, "name" | "description" | "startDate" | "endDate">;
+
+export type Position = {
+  id: string;
+  positionName: string;
+};
+
+export type CreateCandidateRequest = Pick<Candidate, "name" | "lastName" | "description">;
+
+export type CreateElectionResponse = Pick<Election, "electionId" | "name" | "startDate" | "endDate" | "status">;

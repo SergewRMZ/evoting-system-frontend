@@ -1,8 +1,9 @@
 import { createTheme } from "@mui/material/styles";
+import type { ColorMode } from "./theme/ColorModeContext";
 
-const theme = createTheme({
+const theme = (mode: ColorMode) => createTheme({
   palette: {
-    mode: "dark",
+    mode,
     primary: {
       main: "#6982ff",
       contrastText: "#111014",
@@ -11,20 +12,20 @@ const theme = createTheme({
       main: "#94a9ff",
     },
     background: {
-      default: "#09090b",
-      paper: "#121216",
+      default: mode === "dark" ? "#09090b" : "#f5f7fb",
+      paper: mode === "dark" ? "#121216" : "#ffffff",
     },
     text: {
-      primary: "#f4f3f8",
-      secondary: "#a09eaa",
+      primary: mode === "dark" ? "#f4f3f8" : "#171923",
+      secondary: mode === "dark" ? "#a09eaa" : "#555b6e",
     },
     success: {
-      main: "#44ff7c",
+      main: mode === "dark" ? "#44ff7c" : "#168a45",
     },
     error: {
-      main: "#ff5c66",
+      main: mode === "dark" ? "#ff5c66" : "#c62828",
     },
-    divider: "rgba(255,255,255,.1)",
+    divider: mode === "dark" ? "rgba(255,255,255,.1)" : "rgba(25,35,60,.14)",
   },
   typography: {
     fontFamily: ["Inter", "Roboto", "sans-serif"].join(","),

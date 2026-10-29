@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SignedVote } from "../../types/vote.types";
 import bulletinBoardServiceApi from "../../services/bulletin-board-service/bulletin-board.api";
-import axios from "axios";
+import { getApiErrorMessage } from "../../utils/apiError";
 const useBulletinBoard = () => {
     const [loading, setLoading] = useState(false);
 
@@ -10,16 +10,9 @@ const useBulletinBoard = () => {
             setLoading(true);
             
             const data = await bulletinBoardServiceApi.submitVote(signedVote, electionId);
-            console.log(data);
+            return data;
         } catch (error) {
-            if(axios.isAxiosError(error)) {
-                const problemDetails = error.response?.data;
-                if (problemDetails?.detail) {
-                    throw new Error(problemDetails.detail, {cause: error});
-                }
-            }
-
-            throw Error;
+            throw new Error(getApiErrorMessage(error, "No se pudo registrar el voto."), { cause: error });
         }
     }
 

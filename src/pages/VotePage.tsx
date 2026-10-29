@@ -11,6 +11,10 @@ import {
   Button,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Paper,
   Stack,
   Typography,
@@ -26,6 +30,7 @@ import useVotingData from "../hooks/useVotingData";
 import useAuthorization from "../hooks/authorization-service/useAuthorization";
 import type { SignedVote } from "../types/vote.types";
 import useBulletinBoard from "../hooks/bulletin-board-service/useBulletinBoard";
+import { useKeycloak } from "../auth/useKeycloak";
 
 type SubmissionFeedback = {
   message: string;
@@ -44,10 +49,13 @@ function VotePage() {
 
   const { authorizeVote } = useAuthorization();
   const { submitVote } = useBulletinBoard();
+  const { roles } = useKeycloak();
 
   const [selectedCandidacies, setSelectedCandidacies] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionFeedback, setSubmissionFeedback] = useState<SubmissionFeedback | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [voteSubmitted, setVoteSubmitted] = useState(false);
 
   if (loading) return <LoadingPage />;
 
@@ -64,13 +72,27 @@ function VotePage() {
       >
         <FeedbackAlert
           severity="error"
-          message="No se pudo cargar la información de la elección. Intenta recargar la página."
+          message={error?.message ?? "No se pudo cargar la información de la elección. Intenta recargar la página."}
         />
       </Box>
     );
   }
 
+  if (!roles.includes("ROLE_VOTER") || election.status !== "ACTIVE") {
+    return (
+      <Container sx={{ py: 6 }}>
+        <Alert severity="warning">
+          Esta elección no está activa o tu perfil no tiene permiso para emitir un voto.
+        </Alert>
+        <Button component={RouterLink} to={`/vote/${election.electionId}`} sx={{ mt: 2 }}>
+          Volver al detalle
+        </Button>
+      </Container>
+    );
+  }
+
   const selectCandidacy = (electionPositionId: string, candidacyId: string) => {
+    if (voteSubmitted) return;
     setSubmissionFeedback(null);
     setSelectedCandidacies((current) => ({
       ...current,
@@ -100,11 +122,12 @@ function VotePage() {
                 authorizationPublicKey,
             );
 
-            await submitVote(authorizedVote, electionId!);
+            const registration = await submitVote(authorizedVote, election.electionId);
 
+            setVoteSubmitted(true);
             setSubmissionFeedback({
                 severity: "success",
-                message: "Tu voto ha sido emitido correctamente",
+                message: `Tu voto se registró correctamente. Identificador: ${registration.voteId}`,
             });
         } catch (error) {
             setSubmissionFeedback({
@@ -120,6 +143,16 @@ function VotePage() {
   };
 
   const selectedCount = Object.keys(selectedCandidacies).length;
+  const submitForReview = () => {
+    if (selectedCount !== election.positions.length) {
+      setSubmissionFeedback({
+        severity: "error",
+        message: "Selecciona una candidatura para cada cargo antes de continuar.",
+      });
+      return;
+    }
+    setReviewOpen(true);
+  };
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -178,6 +211,7 @@ function VotePage() {
               selectedCandidateId={
                 selectedCandidacies[position.electionPositionId]
               }
+              selectionDisabled={voteSubmitted}
               onCandidacySelect={selectCandidacy}
             />
           ))}
@@ -211,7 +245,7 @@ function VotePage() {
                   color="text.secondary"
                   sx={{ mt: 0.5 }}
                 >
-                  Puedes cambiar tus selecciones antes de continuar.
+                  Revisa tus selecciones antes de confirmar la emisión del voto.
                 </Typography>
               </Box>
             </Stack>
@@ -225,11 +259,11 @@ function VotePage() {
                   <HowToVoteOutlined />
                 )
               }
-              onClick={prepareVoteSubmission}
-              disabled={isSubmitting}
+              onClick={submitForReview}
+              disabled={isSubmitting || voteSubmitted || election.positions.length === 0}
               sx={{ px: 3, whiteSpace: "nowrap" }}
             >
-              {isSubmitting ? "Procesando voto..." : "Preparar voto"}
+              {isSubmitting ? "Procesando voto..." : voteSubmitted ? "Voto emitido" : "Revisar y continuar"}
             </Button>
           </Stack>
           {submissionFeedback && (
@@ -250,6 +284,42 @@ function VotePage() {
           votos.
         </Typography>
       </Container>
+      <Dialog open={reviewOpen} onClose={() => !isSubmitting && setReviewOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Confirma tus selecciones</DialogTitle>
+        <DialogContent dividers>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            Verifica tu selección para cada cargo. Al confirmar, el voto se cifrará y se enviará para su autorización y registro.
+          </Typography>
+          <Stack spacing={1.5}>
+            {election.positions.map((position) => {
+              const candidacy = position.candidacies.find(
+                (item) => item.candidacyId === selectedCandidacies[position.electionPositionId],
+              );
+              return (
+                <Paper key={position.electionPositionId} variant="outlined" sx={{ p: 1.5, borderColor: "divider" }}>
+                  <Typography variant="caption" color="text.secondary">{position.positionName}</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>
+                    {candidacy ? `${candidacy.candidate.name} ${candidacy.candidate.lastName}` : "Sin selección"}
+                  </Typography>
+                </Paper>
+              );
+            })}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setReviewOpen(false)} disabled={isSubmitting}>Volver a editar</Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setReviewOpen(false);
+              void prepareVoteSubmission();
+            }}
+            disabled={isSubmitting}
+          >
+            Confirmar y emitir voto
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

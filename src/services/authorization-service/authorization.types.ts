@@ -5,7 +5,7 @@ export type RsaBssaPublicKey = {
     n: string;
     e: string;
     use?: string;
-    kid: string;
+    kid?: string;
     alg?: string;
 };
 
@@ -14,7 +14,7 @@ export type AuthorizationPublicKey = {
     electionId: string;
     publicKey: RsaBssaPublicKey;
     keyStatus: AuthorizationPublicKeyStatus;
-    createdAt: string;
+    createdAt?: string;
 }
 
 export type BlindSignature = {
@@ -23,4 +23,12 @@ export type BlindSignature = {
     electionId: string;
     issuedAt: string;
     userId: string;
+};
+
+export type AuthorizationKeys = {
+    authorizationKeysId: string;
+    electionId: string;
+    publicKey: RsaBssaPublicKey;
+    keyStatus: AuthorizationPublicKeyStatus;
+    createdAt: string;
 };

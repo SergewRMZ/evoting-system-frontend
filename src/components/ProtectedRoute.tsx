@@ -3,12 +3,12 @@ import { Navigate, Outlet } from "react-router-dom";
 import LoadingPage from "./LoadingPage";
 
 type ProtectedRouteProps = {
-    // children: React.ReactNode;
     redirectTo?: string;
+    allowedRoles?: string[];
 };
 
-export const ProtectedRoute = ({ redirectTo = "/" }: ProtectedRouteProps) => {
-    const { authenticated, loading } = useKeycloak();
+export const ProtectedRoute = ({ redirectTo = "/login", allowedRoles }: ProtectedRouteProps) => {
+    const { authenticated, loading, roles } = useKeycloak();
 
     if(loading) {
         return <LoadingPage/>
@@ -16,6 +16,9 @@ export const ProtectedRoute = ({ redirectTo = "/" }: ProtectedRouteProps) => {
 
     if(!authenticated) {
         return <Navigate to={redirectTo} replace />;
+    }
+    if (allowedRoles && !allowedRoles.some((role) => roles.includes(role))) {
+        return <Navigate to="/vote" replace />;
     }
     return <Outlet />;
 }

@@ -8,17 +8,11 @@ export const apiClient = axios.create({
   },
 });
 
-/**
- * Configuración en axios para agregar el token del proveedor de identidad
- * de tal manera que toas las solicitudes HTTP realizadas a través de la aplicación
- * sean autenticadas.
- */
 apiClient.interceptors.request.use(async (config) => {
-  if(keycloak.authenticated) {
+  if (keycloak.authenticated) {
     await keycloak.updateToken(30);
 
-    if(keycloak.token) {
-      console.log("Token added to header")
+    if (keycloak.token) {
       config.headers.Authorization = `Bearer ${keycloak.token}`;
     }
   }

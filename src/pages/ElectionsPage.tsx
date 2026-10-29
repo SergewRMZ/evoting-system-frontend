@@ -13,11 +13,14 @@ import {
   Paper,
   Stack,
   Typography,
+  Alert,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import type { ElectionStatus } from "../services/election-service/election.types";
 import useElections from "../hooks/election-service/useElections";
+import { useKeycloak } from "../auth/useKeycloak";
+import LoadingPage from "../components/LoadingPage";
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", {
   dateStyle: "medium",
@@ -25,6 +28,7 @@ const dateFormatter = new Intl.DateTimeFormat("es-MX", {
 });
 
 const statusLabels: Record<ElectionStatus, string> = {
+  DRAFT: "Borrador",
   CREATED: "Programada",
   PUBLISHED: "Publicada",
   VERIFIED: "Verificada",
@@ -34,7 +38,17 @@ const statusLabels: Record<ElectionStatus, string> = {
 };
 
 function ElectionsPage() {
-  const { elections } = useElections();
+  const { elections: allElections, loading, error } = useElections();
+  const { roles } = useKeycloak();
+  const isAdmin = roles.includes("ROLE_ADMIN");
+  const isAuthority = roles.includes("ROLE_AUTHORITY");
+  const elections = allElections.filter(({ status }) => {
+    if (isAdmin) return true;
+    if (isAuthority) return status !== "DRAFT";
+    return status === "ACTIVE" || status === "CLOSED" || status === "FINISHED";
+  });
+
+  if (loading) return <LoadingPage message="Cargando elecciones disponibles..." />;
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -78,7 +92,7 @@ function ElectionsPage() {
         >
           <RadioButtonChecked sx={{ color: "secondary.main", fontSize: 18 }} />
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            Elecciones activas
+            {isAdmin ? "Todas las elecciones" : isAuthority ? "Elecciones para revisión" : "Elecciones disponibles"}
           </Typography>
           <Chip
             size="small"
@@ -92,14 +106,16 @@ function ElectionsPage() {
           />
         </Stack>
 
-        {elections.length === 0 ? (
+        {error ? (
+          <Alert severity="error">{error.message}</Alert>
+        ) : elections.length === 0 ? (
           <Paper
             variant="outlined"
             sx={{ p: { xs: 3, md: 5 }, borderColor: "divider" }}
           >
             <Typography variant="h6">No hay elecciones activas</Typography>
             <Typography color="text.secondary" sx={{ mt: 1 }}>
-              Cuando haya una elección activa, aparecerá en esta sección.
+              No hay elecciones disponibles para tu perfil en este momento.
             </Typography>
           </Paper>
         ) : (
@@ -117,8 +133,7 @@ function ElectionsPage() {
                     color: "inherit",
                     textDecoration: "none",
                     borderColor: "divider",
-                    background:
-                      "linear-gradient(135deg, rgba(155,138,251,.08), rgba(18,18,22,1) 55%)",
+                    bgcolor: "background.paper",
                     transition: "border-color .2s ease, transform .2s ease",
                     "&:hover": {
                       borderColor: "primary.main",
@@ -197,7 +212,7 @@ function ElectionsPage() {
             alignItems: { xs: "flex-start", sm: "center" },
             gap: 2,
             borderColor: "divider",
-            bgcolor: "rgba(255,255,255,.02)",
+            bgcolor: "background.paper",
           }}
         >
           <ShieldOutlined sx={{ color: "secondary.main", mt: { xs: 0.25, sm: 0 } }} />

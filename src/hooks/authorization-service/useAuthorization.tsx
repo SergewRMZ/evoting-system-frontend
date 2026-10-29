@@ -1,12 +1,12 @@
 import { useState } from "react"
 import authorizationServiceApi from "../../services/authorization-service/authorization.api";
-import axios from "axios";
 import type { EncryptionPublicKey } from "../../services/tally-service/tally-service.types";
 import type { AuthorizationPublicKey } from "../../services/authorization-service/authorization.types";
 import { createBlindedVoteMessage, unblindVote } from "../../utils/voting/vote.utils";
 import type { ElectionDetails } from "../../services/election-service/election.types";
 import { Uint8ArrayToBase64 } from "../../crypto/crypto.utils";
 import type { SignedVote } from "../../types/vote.types";
+import { getApiErrorMessage } from "../../utils/apiError";
 
 const useAuthorization = () => {
     const[loading, setLoading] = useState(false);
@@ -57,14 +57,7 @@ const useAuthorization = () => {
                 signature
             };
         }   catch(error) {
-            if(axios.isAxiosError(error)) {
-                const problemDetails = error.response?.data;
-                if (problemDetails?.detail) {
-                    throw new Error(problemDetails.detail, {cause: error});
-                }
-            }
-
-            throw error;
+            throw new Error(getApiErrorMessage(error, "No se pudo autorizar el voto."), { cause: error });
         }   
         
         finally {

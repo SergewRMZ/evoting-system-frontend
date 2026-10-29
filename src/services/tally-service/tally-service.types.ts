@@ -8,3 +8,13 @@ export type EncryptionPublicKey = {
     createdAt: string
 };
 
+export type EncryptionKey = EncryptionPublicKey;
+
+export type ElectionTallyResult = {
+    id: string | null;
+    electionPositionId: string;
+    candidacyId: string;
+    totalVotes: number;
+    result: number;
+    createdAt: string;
+};

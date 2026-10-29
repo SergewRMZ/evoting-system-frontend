@@ -1,6 +1,10 @@
 import { Box, CircularProgress, Typography } from "@mui/material";
 
-function LoadingPage() {
+type LoadingPageProps = {
+  message?: string;
+};
+
+function LoadingPage({ message = "Cargando información..." }: LoadingPageProps) {
     return (
         <Box
           sx={{
@@ -12,9 +16,9 @@ function LoadingPage() {
             gap: 2
           }}
         >
-          <CircularProgress color="primary" aria-label="Loading..."/>
-          <Typography variant="h5">
-            Cargando...
+          <CircularProgress color="primary" aria-label="Cargando" />
+          <Typography variant="h5" role="status" aria-live="polite">
+            {message}
           </Typography>
         </Box>
     )
