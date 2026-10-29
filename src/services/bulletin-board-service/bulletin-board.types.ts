@@ -16,6 +16,7 @@ export type BulletinBoardVote = {
         }[];
     };
     randomizer: string;
+    digest?: string;
     signature: string;
 };
 

@@ -49,3 +49,16 @@ export type Position = {
 export type CreateCandidateRequest = Pick<Candidate, "name" | "lastName" | "description">;
 
 export type CreateElectionResponse = Pick<Election, "electionId" | "name" | "startDate" | "endDate" | "status">;
+
+export type CreateCandidacyResponse = {
+  id: string;
+  candidateId: string;
+  electionPositionId: string;
+  createdAt: string;
+};
+
+export type AssociatePositionResponse = {
+  id: string;
+  electionId: string;
+  positionId: string;
+};

@@ -1,7 +1,9 @@
 import { apiClient } from "../../api/apiClient";
 import type {
     Candidate,
+    AssociatePositionResponse,
     CreateCandidateRequest,
+    CreateCandidacyResponse,
     CreateElectionRequest,
     CreateElectionResponse,
     Election,
@@ -50,10 +52,11 @@ const electionServiceApi = {
         return response.data;
     },
 
-    associatePosition: async (electionId: string, positionId: string): Promise<void> => {
-        await apiClient.post(
+    associatePosition: async (electionId: string, positionId: string): Promise<AssociatePositionResponse> => {
+        const response = await apiClient.post(
             `/api/election-service/elections/${encodeURIComponent(electionId)}/positions/${encodeURIComponent(positionId)}`,
         );
+        return response.data;
     },
 
     getCandidates: async (): Promise<Candidate[]> => {
@@ -66,11 +69,12 @@ const electionServiceApi = {
         return response.data;
     },
 
-    addCandidacies: async (electionPositionId: string, candidateIds: string[]): Promise<void> => {
-        await apiClient.post(
+    addCandidacies: async (electionPositionId: string, candidateIds: string[]): Promise<CreateCandidacyResponse[]> => {
+        const response = await apiClient.post(
             `/api/election-service/election-positions/${encodeURIComponent(electionPositionId)}/candidacies`,
             { candidateIds },
         );
+        return response.data;
     },
 }
 

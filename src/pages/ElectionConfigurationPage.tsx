@@ -7,12 +7,14 @@ import {
 } from "@mui/icons-material";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
-  Checkbox,
   Container,
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   FormControl,
-  FormControlLabel,
   InputLabel,
   MenuItem,
   Paper,
@@ -21,6 +23,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import ExpandMore from "@mui/icons-material/ExpandMore";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LoadingPage from "../components/LoadingPage";
@@ -47,7 +50,9 @@ function ElectionConfigurationPage() {
   const [busy, setBusy] = useState(false);
   const [selectedPositionId, setSelectedPositionId] = useState("");
   const [newPositionName, setNewPositionName] = useState("");
+  const [associatedPositionIds, setAssociatedPositionIds] = useState<string[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<Record<string, string[]>>({});
+  const [associatedCandidateIds, setAssociatedCandidateIds] = useState<Record<string, string[]>>({});
   const [newCandidate, setNewCandidate] = useState<CreateCandidateRequest>({
     name: "",
     lastName: "",
@@ -103,29 +108,33 @@ function ElectionConfigurationPage() {
     };
   }, [electionId]);
 
-  const runOperation = async (operation: () => Promise<void>, successMessage: string) => {
+  const associatePosition = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!electionId || !selectedPositionId) return;
+    if (election?.positions.some((position) => position.positionId === selectedPositionId) ||
+      associatedPositionIds.includes(selectedPositionId)) {
+      setSelectedPositionId("");
+      return;
+    }
+
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      await operation();
-      await refreshElection();
-      setMessage(successMessage);
+      const associated = await electionServiceApi.associatePosition(electionId, selectedPositionId);
+      setAssociatedPositionIds((current) => [...new Set([...current, associated.positionId])]);
+      setSelectedPositionId("");
+      setMessage("El cargo se asoció a la elección.");
+      try {
+        await refreshElection();
+      } catch (refreshError) {
+        setError(`El cargo se asoció, pero no se pudo actualizar el detalle: ${getApiErrorMessage(refreshError, "error desconocido")}`);
+      }
     } catch (operationError) {
-      setError(getApiErrorMessage(operationError, "No se pudo completar la operación."));
+      setError(getApiErrorMessage(operationError, "No se pudo asociar el cargo."));
     } finally {
       setBusy(false);
     }
-  };
-
-  const associatePosition = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!electionId || !selectedPositionId) return;
-    await runOperation(
-      () => electionServiceApi.associatePosition(electionId, selectedPositionId),
-      "El cargo se asoció a la elección.",
-    );
-    setSelectedPositionId("");
   };
 
   const createAndAssociatePosition = async (event: FormEvent<HTMLFormElement>) => {
@@ -141,7 +150,8 @@ function ElectionConfigurationPage() {
     try {
       const position = await electionServiceApi.createPosition(newPositionName.trim());
       setPositions((current) => [...current, position]);
-      await electionServiceApi.associatePosition(electionId, position.id);
+      const associated = await electionServiceApi.associatePosition(electionId, position.id);
+      setAssociatedPositionIds((current) => [...new Set([...current, associated.positionId])]);
       await refreshElection();
       setNewPositionName("");
       setMessage("El cargo se creó y se asoció a la elección.");
@@ -179,14 +189,39 @@ function ElectionConfigurationPage() {
 
   const addCandidacies = async (electionPositionId: string) => {
     const candidateIds = selectedCandidates[electionPositionId] ?? [];
-    if (candidateIds.length === 0) return;
-    await runOperation(
-      async () => {
-        await electionServiceApi.addCandidacies(electionPositionId, candidateIds);
-      },
-      "Las candidaturas seleccionadas se agregaron al cargo.",
-    );
-    setSelectedCandidates((current) => ({ ...current, [electionPositionId]: [] }));
+    const alreadyAssociated = new Set([
+      ...(election?.positions.find((position) => position.electionPositionId === electionPositionId)
+        ?.candidacies.map((candidacy) => candidacy.candidate.id) ?? []),
+      ...(associatedCandidateIds[electionPositionId] ?? []),
+    ]);
+    const newCandidateIds = candidateIds.filter((candidateId) => !alreadyAssociated.has(candidateId));
+    if (newCandidateIds.length === 0) {
+      setSelectedCandidates((current) => ({ ...current, [electionPositionId]: [] }));
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const createdCandidacies = await electionServiceApi.addCandidacies(electionPositionId, newCandidateIds);
+      const confirmedIds = createdCandidacies.map((candidacy) => candidacy.candidateId);
+      setAssociatedCandidateIds((current) => ({
+        ...current,
+        [electionPositionId]: [...new Set([...(current[electionPositionId] ?? []), ...confirmedIds])],
+      }));
+      setSelectedCandidates((current) => ({ ...current, [electionPositionId]: [] }));
+      setMessage("Las candidaturas seleccionadas se agregaron al cargo.");
+      try {
+        await refreshElection();
+      } catch (refreshError) {
+        setError(`Las candidaturas se agregaron, pero no se pudo actualizar el detalle: ${getApiErrorMessage(refreshError, "error desconocido")}`);
+      }
+    } catch (operationError) {
+      setError(getApiErrorMessage(operationError, "No se pudieron agregar las candidaturas."));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const publishElection = async () => {
@@ -208,6 +243,10 @@ function ElectionConfigurationPage() {
 
   const positionsConfigured = election.positions.length > 0 &&
     election.positions.every((position) => position.candidacies.length > 0);
+  const availablePositions = positions.filter((position) =>
+    !election.positions.some((associated) => associated.positionId === position.id) &&
+    !associatedPositionIds.includes(position.id)
+  );
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -235,7 +274,7 @@ function ElectionConfigurationPage() {
                 {positionsError} El contrato documenta la consulta de cargos con rol ROLE_VOTER; puedes crear y asociar un cargo nuevo desde aquí.
               </Alert>
             )}
-            {positions.length > 0 && (
+            {availablePositions.length > 0 && (
               <Box component="form" onSubmit={associatePosition}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
                   <FormControl fullWidth>
@@ -246,7 +285,7 @@ function ElectionConfigurationPage() {
                       label="Cargo existente"
                       onChange={(event) => setSelectedPositionId(event.target.value)}
                     >
-                      {positions.map((position) => (
+                      {availablePositions.map((position) => (
                         <MenuItem key={position.id} value={position.id}>{position.positionName}</MenuItem>
                       ))}
                     </Select>
@@ -256,6 +295,9 @@ function ElectionConfigurationPage() {
                   </Button>
                 </Stack>
               </Box>
+            )}
+            {positions.length > 0 && availablePositions.length === 0 && (
+              <Alert severity="success">Todos los cargos consultados ya están asociados a esta elección.</Alert>
             )}
             <Box component="form" onSubmit={createAndAssociatePosition}>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
@@ -274,8 +316,16 @@ function ElectionConfigurationPage() {
           </Stack>
         </Paper>
 
-        <Paper variant="outlined" sx={{ p: { xs: 2.5, md: 3 }, borderColor: "divider", mb: 3 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>Registrar candidato</Typography>
+        <Accordion variant="outlined" sx={{ mb: 3, borderColor: "divider" }}>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Registrar un candidato nuevo</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Usa esta opción si la persona todavía no aparece en el catálogo.
+              </Typography>
+            </Box>
+          </AccordionSummary>
+          <AccordionDetails>
           <Alert severity="info" sx={{ mb: 2 }}>
             El contrato del endpoint de creación de candidatos requiere ROLE_VOTER. Si tu cuenta administradora no tiene ese rol, la API rechazará el registro.
           </Alert>
@@ -290,9 +340,13 @@ function ElectionConfigurationPage() {
             </Stack>
           </Box>
           {candidateError && <Alert severity="warning" sx={{ mt: 2 }}>{candidateError}</Alert>}
-        </Paper>
+          </AccordionDetails>
+        </Accordion>
 
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>Candidaturas por cargo</Typography>
+        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Asociar candidatos a los cargos</Typography>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
+          Selecciona candidatos del catálogo existente para cada cargo. Los que ya fueron asociados no volverán a aparecer.
+        </Typography>
         {election.positions.length === 0 && <Alert severity="info" sx={{ mb: 2 }}>Agrega al menos un cargo para asignar candidaturas.</Alert>}
         <Stack spacing={2}>
           {election.positions.map((position) => (
@@ -307,30 +361,42 @@ function ElectionConfigurationPage() {
                 </Alert>
               ) : (
                 <>
-                  <Stack direction={{ xs: "column", sm: "row" }} sx={{ mt: 1, flexWrap: "wrap", gap: 1 }}>
-                    {candidates
-                      .filter((candidate) => candidate.isActive && !position.candidacies.some((item) => item.candidate.id === candidate.id))
-                      .map((candidate) => (
-                      <FormControlLabel
-                        key={candidate.id}
-                        control={
-                          <Checkbox
-                            checked={(selectedCandidates[position.electionPositionId] ?? []).includes(candidate.id)}
-                            onChange={(event) => {
-                              const current = selectedCandidates[position.electionPositionId] ?? [];
-                              setSelectedCandidates({
-                                ...selectedCandidates,
-                                [position.electionPositionId]: event.target.checked
-                                  ? [...current, candidate.id]
-                                  : current.filter((id) => id !== candidate.id),
-                              });
-                            }}
+                  {(() => {
+                    const availableCandidates = candidates.filter((candidate) =>
+                      candidate.isActive &&
+                      !position.candidacies.some((item) => item.candidate.id === candidate.id) &&
+                      !(associatedCandidateIds[position.electionPositionId] ?? []).includes(candidate.id)
+                    );
+                    const selectedOptions = availableCandidates.filter((candidate) =>
+                      (selectedCandidates[position.electionPositionId] ?? []).includes(candidate.id)
+                    );
+
+                    if (availableCandidates.length === 0) {
+                      return <Alert severity="success" sx={{ mt: 2 }}>Todos los candidatos activos ya están asociados a este cargo.</Alert>;
+                    }
+
+                    return (
+                      <Autocomplete
+                        multiple
+                        options={availableCandidates}
+                        value={selectedOptions}
+                        getOptionLabel={(candidate) => `${candidate.name} ${candidate.lastName}`}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        onChange={(_, selected) => setSelectedCandidates((current) => ({
+                          ...current,
+                          [position.electionPositionId]: selected.map((candidate) => candidate.id),
+                        }))}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Candidatos registrados"
+                            placeholder="Buscar y seleccionar candidatos"
+                            sx={{ mt: 2 }}
                           />
-                        }
-                        label={`${candidate.name} ${candidate.lastName}`}
+                        )}
                       />
-                    ))}
-                  </Stack>
+                    );
+                  })()}
                   <Button
                     variant="outlined"
                     startIcon={<PersonAddAlt1Outlined />}

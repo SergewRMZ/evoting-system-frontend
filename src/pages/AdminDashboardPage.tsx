@@ -5,7 +5,12 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Paper,
   Stack,
   TextField,
@@ -26,6 +31,7 @@ function AdminDashboardPage() {
   const [endDate, setEndDate] = useState("");
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const createElection = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,6 +55,7 @@ function AdminDashboardPage() {
         startDate: start.toISOString(),
         endDate: end.toISOString(),
       });
+      setCreateDialogOpen(false);
       navigate(`/admin/elections/${created.electionId}`);
     } catch (createError) {
       setFormError(getApiErrorMessage(createError, "No se pudo crear la elección."));
@@ -66,30 +73,26 @@ function AdminDashboardPage() {
           Gestión de elecciones
         </Typography>
         <Typography color="text.secondary" sx={{ mt: 1, mb: 4 }}>
-          Crea una elección en borrador, configura sus cargos y candidaturas y publícala para revisión.
+          Organiza los procesos electorales y revisa su configuración en un solo lugar.
         </Typography>
 
-        <Paper component="form" onSubmit={createElection} variant="outlined" sx={{ p: { xs: 2.5, md: 4 }, borderColor: "divider" }}>
-          <Typography variant="h5" sx={{ mb: 2.5, fontWeight: 700 }}>Crear elección</Typography>
-          <Stack spacing={2}>
-            <TextField label="Nombre de la elección" value={name} onChange={(event) => setName(event.target.value)} required />
-            <TextField label="Descripción" value={description} onChange={(event) => setDescription(event.target.value)} required multiline minRows={3} />
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField label="Fecha y hora de inicio" type="datetime-local" value={startDate} onChange={(event) => setStartDate(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} fullWidth />
-              <TextField label="Fecha y hora de finalización" type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} fullWidth />
-            </Stack>
-            {formError && <Alert severity="error">{formError}</Alert>}
+        <Paper variant="outlined" sx={{ p: { xs: 2.5, md: 3 }, borderColor: "divider", mb: 4 }}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
             <Box>
-              <Button type="submit" variant="contained" startIcon={<Add />} disabled={creating}>
-                {creating ? "Creando..." : "Crear y configurar"}
-              </Button>
+              <Typography variant="h5" sx={{ fontWeight: 700 }}>Inicia una nueva elección</Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.75 }}>
+                Primero guardarás los datos básicos; después podrás configurar cargos y candidaturas.
+              </Typography>
             </Box>
+            <Button variant="contained" startIcon={<Add />} onClick={() => setCreateDialogOpen(true)}>
+              Nueva elección
+            </Button>
           </Stack>
         </Paper>
 
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center", mt: 5, mb: 2 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 2 }}>
           <HowToVoteOutlined color="primary" />
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>Elecciones registradas</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>Procesos electorales</Typography>
         </Stack>
         {error && <Alert severity="error">{error.message}</Alert>}
         {!error && !loading && elections.length === 0 && (
@@ -102,7 +105,8 @@ function AdminDashboardPage() {
                 <Box>
                   <Typography variant="h6">{election.name}</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    {election.status} · {new Date(election.startDate).toLocaleString("es-MX")}
+                    <Chip size="small" label={election.status === "DRAFT" ? "Borrador" : election.status} sx={{ mr: 1 }} />
+                    {new Date(election.startDate).toLocaleString("es-MX")}
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={1}>
@@ -116,6 +120,35 @@ function AdminDashboardPage() {
           ))}
         </Stack>
       </Container>
+
+      <Dialog open={createDialogOpen} onClose={() => !creating && setCreateDialogOpen(false)} fullWidth maxWidth="sm">
+        <Box component="form" onSubmit={createElection}>
+          <DialogTitle sx={{ pb: 1 }}>
+            <Typography variant="overline" color="secondary.main">NUEVA ELECCIÓN · PASO 1 DE 2</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.5 }}>Datos generales</Typography>
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Al continuar, la elección se guardará como borrador. En el siguiente paso podrás añadir cargos y candidaturas antes de publicarla.
+            </Typography>
+            <Stack spacing={2}>
+              <TextField autoFocus label="Nombre de la elección" value={name} onChange={(event) => setName(event.target.value)} required />
+              <TextField label="Descripción" value={description} onChange={(event) => setDescription(event.target.value)} required multiline minRows={3} />
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField label="Inicio" type="datetime-local" value={startDate} onChange={(event) => setStartDate(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} fullWidth />
+                <TextField label="Finalización" type="datetime-local" value={endDate} onChange={(event) => setEndDate(event.target.value)} required slotProps={{ inputLabel: { shrink: true } }} fullWidth />
+              </Stack>
+              {formError && <Alert severity="error">{formError}</Alert>}
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button onClick={() => setCreateDialogOpen(false)} disabled={creating}>Cancelar</Button>
+            <Button type="submit" variant="contained" startIcon={<Add />} disabled={creating}>
+              {creating ? "Creando..." : "Crear y continuar"}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
     </Box>
   );
 }

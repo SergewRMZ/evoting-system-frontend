@@ -29,7 +29,7 @@ import FeedbackAlert from "../components/FeedbackAlert";
 import useVotingData from "../hooks/useVotingData";
 import useAuthorization from "../hooks/authorization-service/useAuthorization";
 import type { SignedVote } from "../types/vote.types";
-import useBulletinBoard from "../hooks/bulletin-board-service/useBulletinBoard";
+import useBulletinBoard, { VoteAlreadyRegisteredError } from "../hooks/bulletin-board-service/useBulletinBoard";
 import { useKeycloak } from "../auth/useKeycloak";
 
 type SubmissionFeedback = {
@@ -127,9 +127,19 @@ function VotePage() {
             setVoteSubmitted(true);
             setSubmissionFeedback({
                 severity: "success",
-                message: `Tu voto se registró correctamente. Identificador: ${registration.voteId}`,
+                message: `Tu voto se emitió correctamente y quedó registrado. Identificador: ${registration.voteId}`,
             });
         } catch (error) {
+            if (error instanceof VoteAlreadyRegisteredError) {
+              setVoteSubmitted(true);
+              setSubmissionFeedback({
+                severity: "success",
+                message: error.voteId
+                  ? `Tu voto ya había sido emitido y registrado. Identificador: ${error.voteId}`
+                  : "Tu voto ya había sido emitido y registrado para esta elección. No se volvió a enviar.",
+              });
+              return;
+            }
             setSubmissionFeedback({
                 severity: "error",
                 message:
@@ -272,6 +282,11 @@ function VotePage() {
                 severity={submissionFeedback.severity}
                 message={submissionFeedback.message}
               />
+              {voteSubmitted && (
+                <Button component={RouterLink} to={`/vote/${election.electionId}/bulletin`} sx={{ mt: 1 }}>
+                  Consultar tablón público
+                </Button>
+              )}
             </Box>
           )}
         </Paper>
