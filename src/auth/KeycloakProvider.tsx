@@ -2,6 +2,7 @@ import {useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import keycloak from "./keycloakConfig";
 import { KeycloakContext } from "./KeycloakContext";
+import LoadingPage from "../components/LoadingPage";
 
 interface KeycloakProviderProps {
   children: ReactNode;
@@ -14,7 +15,6 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
 
 
   useEffect(() => {
-    // Evita que se ejecute la inicialización de Keycloak más de una vez.
     if(initialized.current) return;
 
     initialized.current = true;
@@ -29,7 +29,6 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
 
         console.log("Keycloak has been initialized.");
         setAuthenticated(authenticated);
-        console.log(keycloak);
       } catch (error) {
         console.error(`Error: ${error}`);
       } finally {
@@ -68,7 +67,7 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
         getToken,
       }}
     >
-      { children }
+      { loading? <LoadingPage/> : children }
     </KeycloakContext.Provider>
   );
 }

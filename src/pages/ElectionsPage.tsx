@@ -67,7 +67,8 @@ function ElectionsPage() {
           color="text.secondary"
           sx={{ maxWidth: 620, mt: 2, fontSize: "1.05rem", lineHeight: 1.7 }}
         >
-          A continuación revisa las elecciones disponibles y selecciona los candidatos de tu preferencia.
+          A continuación revisa la elección disponible y selecciona los candidatos de tu preferencia.
+          También podrás consultar los resultados al finalizar la elección.
         </Typography>
 
         <Stack
@@ -98,7 +99,7 @@ function ElectionsPage() {
           >
             <Typography variant="h6">No hay elecciones activas</Typography>
             <Typography color="text.secondary" sx={{ mt: 1 }}>
-              Cuando haya una elección disponible, aparecerá en esta sección.
+              Cuando haya una elección activa, aparecerá en esta sección.
             </Typography>
           </Paper>
         ) : (

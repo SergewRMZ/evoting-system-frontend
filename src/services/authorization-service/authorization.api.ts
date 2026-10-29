@@ -8,11 +8,10 @@ const authorizationServiceApi = {
     },
 
     /**
-     * 
      * @param electionId Identificador de la elección
      * @param blindedMessage Mensaje cegado en formato Base64.
-     * @returns Promise<BlindSignature> Una promesa que resuelve con el contenido
-     * de una firma digital ciega. 
+     * @returns Promise<BlindSignature> Una promesa que resuelve 
+     * con el contenido de una firma digital ciega. 
      */
     requestBlindSignature: async(
         electionId: string, 

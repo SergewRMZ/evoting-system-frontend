@@ -45,13 +45,9 @@ function VotePage() {
   const { authorizeVote } = useAuthorization();
   const { submitVote } = useBulletinBoard();
 
-  const [selectedCandidacies, setSelectedCandidacies] = useState<
-    Record<string, string>
-  >({});
-
+  const [selectedCandidacies, setSelectedCandidacies] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionFeedback, setSubmissionFeedback] =
-    useState<SubmissionFeedback | null>(null);
+  const [submissionFeedback, setSubmissionFeedback] = useState<SubmissionFeedback | null>(null);
 
   if (loading) return <LoadingPage />;
 
@@ -104,9 +100,8 @@ function VotePage() {
                 authorizationPublicKey,
             );
 
-            console.log("Voto autorizado: ", JSON.stringify(authorizedVote, null, 2));
             await submitVote(authorizedVote, electionId!);
-            
+
             setSubmissionFeedback({
                 severity: "success",
                 message: "Tu voto ha sido emitido correctamente",

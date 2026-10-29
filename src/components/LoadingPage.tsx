@@ -12,7 +12,7 @@ function LoadingPage() {
             gap: 2
           }}
         >
-          <CircularProgress color="secondary" aria-label="Loading..."/>
+          <CircularProgress color="primary" aria-label="Loading..."/>
           <Typography variant="h5">
             Cargando...
           </Typography>

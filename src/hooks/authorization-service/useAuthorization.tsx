@@ -38,9 +38,6 @@ const useAuthorization = () => {
                 );
 
             const randomizer = Uint8ArrayToBase64(blindResult.randomizer!);
-            console.log("Factor de desenmascaramiento: ", Uint8ArrayToBase64(blindResult.inv_blind_factor));
-            console.log("Mensaje cegado:", Uint8ArrayToBase64(blindResult.blinded_message));
-
             const data = await authorizationServiceApi.requestBlindSignature(
                 election.electionId, 
                 Uint8ArrayToBase64(blindResult.blinded_message)

@@ -18,6 +18,7 @@ apiClient.interceptors.request.use(async (config) => {
     await keycloak.updateToken(30);
 
     if(keycloak.token) {
+      console.log("Token added to header")
       config.headers.Authorization = `Bearer ${keycloak.token}`;
     }
   }
