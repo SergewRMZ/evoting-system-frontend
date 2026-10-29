@@ -5,6 +5,7 @@ import CandidateCard from "./CandidateCard";
 type PositionSectionProps = {
   position: ElectionPosition;
   selectedCandidateId?: string;
+  selectionDisabled?: boolean;
   onCandidacySelect: (
     electionPositionId: string,
     candidateId: string,
@@ -14,6 +15,7 @@ type PositionSectionProps = {
 function PositionSection({
   position,
   selectedCandidateId,
+  selectionDisabled = false,
   onCandidacySelect,
 }: PositionSectionProps) {
   return (
@@ -41,7 +43,9 @@ function PositionSection({
             color="text.secondary"
             sx={{ mt: 0.5 }}
           >
-            Selecciona como máximo una candidatura para este puesto
+            {selectionDisabled
+              ? "La selección de este puesto quedó cerrada."
+              : "Selecciona como máximo una candidatura para este puesto"}
           </Typography>
         </div>
         <Typography
@@ -68,6 +72,7 @@ function PositionSection({
                 candidacy={candidacy}
                 colorIndex={index}
                 selected={selectedCandidateId === candidacy.candidacyId}
+                selectionDisabled={selectionDisabled}
                 onSelect={(candidacyId) =>
                   onCandidacySelect(position.electionPositionId, candidacyId)
                 }

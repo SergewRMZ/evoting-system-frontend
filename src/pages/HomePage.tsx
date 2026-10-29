@@ -1,7 +1,9 @@
 import {
   ArrowForward,
+  DarkModeOutlined,
   HowToVoteOutlined,
   KeyOutlined,
+  LightModeOutlined,
   LockOutlined,
   VerifiedUserOutlined,
 } from "@mui/icons-material";
@@ -14,7 +16,9 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { useContext } from "react";
 import { Link as RouterLink } from "react-router-dom";
+import { ColorModeContext } from "../theme/ColorModeContext";
 
 const privacyPillars = [
   {
@@ -38,6 +42,8 @@ const privacyPillars = [
 ];
 
 function HomePage() {
+  const { mode, toggleColorMode } = useContext(ColorModeContext);
+
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Box
@@ -45,9 +51,10 @@ function HomePage() {
         sx={{
           position: "relative",
           overflow: "hidden",
-          borderBottom: "1px solid rgba(255,255,255,.08)",
-          background:
-            "radial-gradient(ellipse at 60% 40%, rgba(81, 62, 174, 0.36), transparent 38%), #09090b",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          background: (theme) =>
+            `radial-gradient(ellipse at 60% 40%, rgba(81, 62, 174, 0.2), transparent 38%), ${theme.palette.background.default}`,
         }}
       >
         <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
@@ -75,15 +82,25 @@ function HomePage() {
                 Votación Anónima
               </Typography>
             </Stack>
-            <Button
-              component={RouterLink}
-              to="/login"
-              variant="outlined"
-              color="inherit"
-              sx={{ borderColor: "rgba(255,255,255,.2)" }}
-            >
-              Ingresar
-            </Button>
+            <Stack direction="row" spacing={1}>
+              <Button
+                onClick={toggleColorMode}
+                aria-label={mode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                startIcon={mode === "dark" ? <LightModeOutlined /> : <DarkModeOutlined />}
+                color="inherit"
+              >
+                {mode === "dark" ? "Modo claro" : "Modo oscuro"}
+              </Button>
+              <Button
+                component={RouterLink}
+                to="/login"
+                variant="outlined"
+                color="inherit"
+                sx={{ borderColor: "divider" }}
+              >
+                Ingresar
+              </Button>
+            </Stack>
           </Stack>
 
           <Grid
@@ -153,8 +170,8 @@ function HomePage() {
                 variant="outlined"
                 sx={{
                   p: { xs: 2.5, sm: 3.5 },
-                  borderColor: "rgba(255,255,255,.12)",
-                  bgcolor: "rgba(18,18,22,.78)",
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
                   boxShadow: "0 24px 90px rgba(0,0,0,.28)",
                   backdropFilter: "blur(16px)",
                 }}
@@ -191,7 +208,8 @@ function HomePage() {
                     spacing={2}
                     sx={{
                       py: 2,
-                      borderTop: "1px solid rgba(255,255,255,.08)",
+                      borderTop: "1px solid",
+                      borderColor: "divider",
                       alignItems: "center",
                     }}
                   >
@@ -243,7 +261,7 @@ function HomePage() {
                   height: "100%",
                   p: 3,
                   borderColor: "divider",
-                  bgcolor: "rgba(255,255,255,.02)",
+                  bgcolor: "background.paper",
                 }}
               >
                 <Box

@@ -11,6 +11,8 @@ interface KeycloakProviderProps {
 export function KeycloakProvider({ children }: KeycloakProviderProps) {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+  const [roles, setRoles] = useState<string[]>([]);
+  const [authError, setAuthError] = useState<string | null>(null);
   const initialized = useRef(false);
 
 
@@ -27,10 +29,11 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
           checkLoginIframe: false
         });
 
-        console.log("Keycloak has been initialized.");
         setAuthenticated(authenticated);
+        setRoles(authenticated ? keycloak.realmAccess?.roles ?? [] : []);
       } catch (error) {
-        console.error(`Error: ${error}`);
+        setAuthError("No se pudo conectar con el proveedor de identidad. Verifica la configuración de Keycloak.");
+        console.error("No se pudo inicializar Keycloak.", error);
       } finally {
         setLoading(false);
       }
@@ -56,12 +59,16 @@ export function KeycloakProvider({ children }: KeycloakProviderProps) {
   }
 
   const getToken = () => keycloak.token ?? null;
+  const hasRole = (role: string) => roles.includes(role);
 
   return (
     <KeycloakContext.Provider
       value={{
         loading,
         authenticated,
+        roles,
+        authError,
+        hasRole,
         handleLogout,
         handleLogin,
         getToken,

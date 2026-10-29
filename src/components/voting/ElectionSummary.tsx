@@ -2,6 +2,7 @@ import { Chip, Paper, Stack, Typography } from "@mui/material";
 import type { ElectionDetails, ElectionStatus } from "../../services/election-service/election.types";
 
 const electionStatusLabels: Record<ElectionStatus, string> = {
+  DRAFT: "Borrador",
   CREATED: "Creada",
   PUBLISHED: "Publicada",
   VERIFIED: "Verificada",

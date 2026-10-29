@@ -1,9 +1,19 @@
 import { apiClient } from "../../api/apiClient"
-import type { AuthorizationPublicKey, BlindSignature } from "./authorization.types";
+import type { AuthorizationKeys, AuthorizationPublicKey, BlindSignature } from "./authorization.types";
 
 const authorizationServiceApi = {
     getPublicKey: async (electionId: string): Promise<AuthorizationPublicKey> => {
-        const response = await apiClient.get(`/api/authorization-service/elections/${electionId}/keys/public`);
+        const response = await apiClient.get(`/api/authorization-service/elections/${encodeURIComponent(electionId)}/keys/public`);
+        return response.data;
+    },
+
+    createKeys: async (electionId: string): Promise<AuthorizationKeys> => {
+        const response = await apiClient.post(`/api/authorization-service/elections/${encodeURIComponent(electionId)}/keys`);
+        return response.data;
+    },
+
+    activateKeys: async (electionId: string): Promise<AuthorizationKeys> => {
+        const response = await apiClient.patch(`/api/authorization-service/elections/${encodeURIComponent(electionId)}/keys/activate`);
         return response.data;
     },
 
@@ -17,7 +27,7 @@ const authorizationServiceApi = {
         electionId: string, 
         blindedMessage: string
     ): Promise<BlindSignature> => {
-        const response = await apiClient.post(`/api/authorization-service/elections/${electionId}/blind-signature`,
+        const response = await apiClient.post(`/api/authorization-service/elections/${encodeURIComponent(electionId)}/blind-signature`,
             { blindedMessage }
         );
         return response.data;

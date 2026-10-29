@@ -19,6 +19,7 @@ type CandidateCardProps = {
   candidacy: Candidacy;
   colorIndex: number;
   selected: boolean;
+  selectionDisabled?: boolean;
   onSelect: (candidacyId: string) => void;
 };
 
@@ -26,6 +27,7 @@ function CandidateCard({
   candidacy,
   colorIndex,
   selected,
+  selectionDisabled = false,
   onSelect,
 }: CandidateCardProps) {
   const candidate = candidacy.candidate;
@@ -42,7 +44,7 @@ function CandidateCard({
       }}
     >
       <CardActionArea
-        disabled={!candidate.isActive}
+        disabled={!candidate.isActive || selectionDisabled}
         aria-pressed={selected}
         onClick={() => onSelect(candidacy.candidacyId)}
         sx={{
@@ -92,7 +94,9 @@ function CandidateCard({
             textAlign: "center",
           }}
         >
-          {!candidate.isActive
+          {selectionDisabled
+            ? "Selección cerrada"
+            : !candidate.isActive
             ? "No disponible para selección"
             : selected
               ? "Candidato seleccionado"
