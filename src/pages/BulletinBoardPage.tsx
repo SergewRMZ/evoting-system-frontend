@@ -35,8 +35,22 @@ import type {
   BulletinBoardVote,
 } from "../services/bulletin-board-service/bulletin-board.types";
 import { getApiErrorMessage } from "../utils/apiError";
+import { canonicalize } from "json-canonicalize";
+import { sha3_384Hash, Uint8ArrayToBase64 } from "../crypto/crypto.utils";
 
 const PAGE_SIZE = 10;
+
+function truncateValue(value: string | undefined, visibleCharacters = 18) {
+  if (!value) return "No disponible";
+  if (value.length <= visibleCharacters * 2) return value;
+  return `${value.slice(0, visibleCharacters)}…${value.slice(-visibleCharacters)}`;
+}
+
+async function getVoteDigest(vote: BulletinBoardVote): Promise<string> {
+  if (vote.digest) return vote.digest;
+  const digest = await sha3_384Hash(canonicalize(vote.encryptedVote));
+  return Uint8ArrayToBase64(digest);
+}
 
 function BulletinBoardPage() {
   const { electionId } = useParams<{ electionId: string }>();
@@ -50,6 +64,7 @@ function BulletinBoardPage() {
   const [searchError, setSearchError] = useState("");
   const [searching, setSearching] = useState(false);
   const [selectedVote, setSelectedVote] = useState<BulletinBoardVote | null>(null);
+  const [voteDigests, setVoteDigests] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!electionId) {
@@ -58,8 +73,13 @@ function BulletinBoardPage() {
 
     let active = true;
     bulletinBoardServiceApi.getVotes(electionId, pageNumber, PAGE_SIZE)
-      .then((data) => {
+      .then(async (data) => {
+        const digestEntries = await Promise.all(data.content.map(async (vote) => [
+          vote.voteId,
+          await getVoteDigest(vote),
+        ] as const));
         if (active) {
+          setVoteDigests((current) => ({ ...current, ...Object.fromEntries(digestEntries) }));
           setPageData(data);
           setError("");
         }
@@ -87,8 +107,11 @@ function BulletinBoardPage() {
     setSearchedVote(null);
     try {
       const result = await bulletinBoardServiceApi.findVote(electionId, voteIdInput.trim());
-      if (result.vote) {
-        setSearchedVote(result.vote);
+      const foundVote = result.vote;
+      if (foundVote) {
+        const digest = await getVoteDigest(foundVote);
+        setVoteDigests((current) => ({ ...current, [foundVote.voteId]: digest }));
+        setSearchedVote(foundVote);
         setSearchError("");
       } else {
         setSearchError("No se encontró un registro con ese identificador.");
@@ -149,21 +172,23 @@ function BulletinBoardPage() {
         )}
 
         <TableContainer component={Paper} variant="outlined" sx={{ borderColor: "divider" }}>
-          <Table aria-label="Votos cifrados registrados">
+          <Table aria-label="Votos cifrados registrados" sx={{ minWidth: 760 }}>
             <TableHead>
               <TableRow>
                 <TableCell>Identificador del voto</TableCell>
-                <TableCell align="center">Cargos incluidos</TableCell>
+                <TableCell>Digest</TableCell>
+                <TableCell>Firma digital</TableCell>
                 <TableCell align="right">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={3}>Actualizando registros…</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4}>Actualizando registros…</TableCell></TableRow>
               ) : pageData?.content.length ? pageData.content.map((vote) => (
                 <TableRow key={vote.voteId} hover>
                   <TableCell sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>{vote.voteId}</TableCell>
-                  <TableCell align="center">{vote.encryptedVote.positions.length}</TableCell>
+                  <TableCell sx={{ fontFamily: "monospace" }}>{truncateValue(voteDigests[vote.voteId] ?? vote.digest)}</TableCell>
+                  <TableCell sx={{ fontFamily: "monospace" }}>{truncateValue(vote.signature)}</TableCell>
                   <TableCell align="right">
                     <Button size="small" startIcon={<VisibilityOutlined />} onClick={() => setSelectedVote(vote)}>
                       Ver detalle
@@ -171,7 +196,7 @@ function BulletinBoardPage() {
                   </TableCell>
                 </TableRow>
               )) : (
-                <TableRow><TableCell colSpan={3} align="center">No hay votos registrados en esta página.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={4} align="center">No hay votos registrados en esta página.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -207,9 +232,21 @@ function BulletinBoardPage() {
                   {JSON.stringify(selectedVote.encryptedVote, null, 2)}
                 </Box>
               </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Digest</Typography>
+                <Typography sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>
+                  {voteDigests[selectedVote.voteId] ?? selectedVote.digest ?? "Calculando digest…"}
+                </Typography>
+              </Box>
               <Typography variant="body2" color="text.secondary">
-                Firma: {selectedVote.signature}
+                Factor aleatorio: <Box component="span" sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>{selectedVote.randomizer}</Box>
               </Typography>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Firma digital completa</Typography>
+                <Box component="pre" sx={{ p: 2, mt: 1, maxHeight: 220, overflow: "auto", bgcolor: "background.default", borderRadius: 2, fontSize: "0.75rem", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                  {selectedVote.signature}
+                </Box>
+              </Box>
             </Stack>
           )}
         </DialogContent>

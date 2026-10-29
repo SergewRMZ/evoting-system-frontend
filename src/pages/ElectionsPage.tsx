@@ -42,6 +42,7 @@ function ElectionsPage() {
   const { roles } = useKeycloak();
   const isAdmin = roles.includes("ROLE_ADMIN");
   const isAuthority = roles.includes("ROLE_AUTHORITY");
+  const audience = isAdmin ? "admin" : isAuthority ? "authority" : "voter";
   const elections = allElections.filter(({ status }) => {
     if (isAdmin) return true;
     if (isAuthority) return status !== "DRAFT";
@@ -49,6 +50,36 @@ function ElectionsPage() {
   });
 
   if (loading) return <LoadingPage message="Cargando elecciones disponibles..." />;
+
+  const copy = {
+    admin: {
+      eyebrow: "CENTRO DE ADMINISTRACIÓN",
+      title: "Supervisa los procesos electorales.",
+      description: "Consulta las elecciones en cualquier estado y accede a su detalle para revisar su configuración.",
+      section: "Todas las elecciones",
+      emptyTitle: "Aún no hay elecciones",
+      emptyDescription: "Crea y configura una elección desde el panel de administración.",
+      action: "Gestionar elección",
+    },
+    authority: {
+      eyebrow: "PANEL DE AUTORIDAD ELECTORAL",
+      title: "Revisa y acompaña cada proceso.",
+      description: "Consulta elecciones publicadas y continúa con las acciones de validación y activación disponibles.",
+      section: "Elecciones para revisión",
+      emptyTitle: "No hay elecciones para revisar",
+      emptyDescription: "Las elecciones aparecerán aquí cuando estén publicadas. Los borradores no se muestran a la autoridad.",
+      action: "Revisar elección",
+    },
+    voter: {
+      eyebrow: "TU PARTICIPACIÓN ES CONFIDENCIAL",
+      title: "Consulta los procesos electorales.",
+      description: "Revisa el detalle de las elecciones disponibles y consulta su tablón público. Si una elección está activa, podrás emitir tu voto.",
+      section: "Elecciones disponibles",
+      emptyTitle: "No hay elecciones disponibles",
+      emptyDescription: "Las elecciones activas, cerradas o finalizadas aparecerán aquí.",
+      action: "Ver elección",
+    },
+  }[audience];
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -64,7 +95,7 @@ function ElectionsPage() {
             variant="overline"
             sx={{ fontWeight: 700, letterSpacing: ".13em" }}
           >
-            TU PARTICIPACIÓN ES CONFIDENCIAL
+            {copy.eyebrow}
           </Typography>
         </Stack>
         <Typography
@@ -75,14 +106,13 @@ function ElectionsPage() {
             lineHeight: 1.05,
           }}
         >
-          Realiza tu participación de manera anónima.
+          {copy.title}
         </Typography>
         <Typography
           color="text.secondary"
           sx={{ maxWidth: 620, mt: 2, fontSize: "1.05rem", lineHeight: 1.7 }}
         >
-          A continuación revisa la elección disponible y selecciona los candidatos de tu preferencia.
-          También podrás consultar los resultados al finalizar la elección.
+          {copy.description}
         </Typography>
 
         <Stack
@@ -92,7 +122,7 @@ function ElectionsPage() {
         >
           <RadioButtonChecked sx={{ color: "secondary.main", fontSize: 18 }} />
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            {isAdmin ? "Todas las elecciones" : isAuthority ? "Elecciones para revisión" : "Elecciones disponibles"}
+            {copy.section}
           </Typography>
           <Chip
             size="small"
@@ -113,9 +143,9 @@ function ElectionsPage() {
             variant="outlined"
             sx={{ p: { xs: 3, md: 5 }, borderColor: "divider" }}
           >
-            <Typography variant="h6">No hay elecciones activas</Typography>
+            <Typography variant="h6">{copy.emptyTitle}</Typography>
             <Typography color="text.secondary" sx={{ mt: 1 }}>
-              No hay elecciones disponibles para tu perfil en este momento.
+              {copy.emptyDescription}
             </Typography>
           </Paper>
         ) : (
@@ -193,7 +223,7 @@ function ElectionsPage() {
                   >
                     <ShieldOutlined fontSize="small" />
                     <Typography variant="body2" sx={{ flexGrow: 1, fontWeight: 700 }}>
-                      Ver elección
+                      {copy.action}
                     </Typography>
                     <ArrowForward fontSize="small" />
                   </Stack>
@@ -203,7 +233,7 @@ function ElectionsPage() {
           </Grid>
         )}
 
-        <Paper
+        {audience === "voter" && <Paper
           variant="outlined"
           sx={{
             mt: 5,
@@ -225,7 +255,7 @@ function ElectionsPage() {
               para mantener tu voto anónimo y seguro. Tu elección permanece cifrada.
             </Typography>
           </Box>
-        </Paper>
+        </Paper>}
       </Container>
     </Box>
   );

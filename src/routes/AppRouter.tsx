@@ -16,7 +16,7 @@ function AppRouter() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route element={<ProtectedRoute />}>
+        <Route element={<ProtectedRoute allowedRoles={["ROLE_ADMIN", "ROLE_AUTHORITY", "ROLE_VOTER"]} />}>
           <Route path="/vote" element={<ElectionsPage />} />
           <Route path="/vote/:electionId" element={<ElectionDetailsPage />} />
           <Route path="/vote/:electionId/ballot" element={<VotePage />} />
