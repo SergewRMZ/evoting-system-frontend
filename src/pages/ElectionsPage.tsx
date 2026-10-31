@@ -54,8 +54,8 @@ function ElectionsPage() {
   const copy = {
     admin: {
       eyebrow: "CENTRO DE ADMINISTRACIÓN",
-      title: "Supervisa los procesos electorales.",
-      description: "Consulta las elecciones en cualquier estado y accede a su detalle para revisar su configuración.",
+      title: "Supervisión de procesos electorales.",
+      description: "En este panel podrás visualizar las elecciones en sus diferentes estados. Así como la información con mayor detalle de cada una.",
       section: "Todas las elecciones",
       emptyTitle: "Aún no hay elecciones",
       emptyDescription: "Crea y configura una elección desde el panel de administración.",
@@ -93,7 +93,7 @@ function ElectionsPage() {
           <LockOutlined fontSize="small" />
           <Typography
             variant="overline"
-            sx={{ fontWeight: 700, letterSpacing: ".13em" }}
+            sx={{ fontWeight: 700, letterSpacing: ".15em" }}
           >
             {copy.eyebrow}
           </Typography>

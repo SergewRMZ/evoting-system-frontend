@@ -5,11 +5,11 @@ const theme = (mode: ColorMode) => createTheme({
   palette: {
     mode,
     primary: {
-      main: "#6982ff",
+      main: "#1a9cff",
       contrastText: "#111014",
     },
     secondary: {
-      main: "#94a9ff",
+      main: "#45afff",
     },
     background: {
       default: mode === "dark" ? "#09090b" : "#f5f7fb",
