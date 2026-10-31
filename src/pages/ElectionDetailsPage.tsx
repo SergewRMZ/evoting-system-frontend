@@ -112,7 +112,7 @@ function ElectionDetailsPage() {
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
             <Box>
               <Typography variant="overline" color="secondary.main">
-                DETALLE DE LA ELECCIÓN
+                INFORMACIÓN DE LA ELECCIÓN
               </Typography>
               <Typography variant="h2" sx={{ fontSize: { xs: "2rem", md: "3rem" }, mt: 1 }}>
                 {election.name}

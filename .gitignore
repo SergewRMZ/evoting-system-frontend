@@ -26,3 +26,4 @@ dist-ssr
 .env
 instructions.md
 API-context.md
+API-errors.md
