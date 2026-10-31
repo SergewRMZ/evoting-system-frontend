@@ -109,7 +109,7 @@ function ElectionDetailsPage() {
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Navbar />
       <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 7 } }}>
-        <Button component={RouterLink} to="/vote" startIcon={<ArrowBack />} sx={{ mb: 3 }}>
+        <Button component={RouterLink} to={isAuthority ? "/authority" : "/vote"} startIcon={<ArrowBack />} sx={{ mb: 3 }}>
           Volver a elecciones
         </Button>
 

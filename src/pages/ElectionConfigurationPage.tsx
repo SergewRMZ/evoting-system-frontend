@@ -10,19 +10,21 @@ import {
   Box,
   Button,
   Container,
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   InputLabel,
   MenuItem,
   Paper,
   Select,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
-import ExpandMore from "@mui/icons-material/ExpandMore";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LoadingPage from "../components/LoadingPage";
@@ -48,6 +50,8 @@ function ElectionConfigurationPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [associationDialogPositionId, setAssociationDialogPositionId] = useState("");
   const [selectedPositionId, setSelectedPositionId] = useState("");
   const [newPositionName, setNewPositionName] = useState("");
   const [associatedPositionIds, setAssociatedPositionIds] = useState<string[]>([]);
@@ -228,6 +232,7 @@ function ElectionConfigurationPage() {
       }));
       setSelectedCandidates((current) => ({ ...current, [electionPositionId]: [] }));
       setMessage("Las candidaturas seleccionadas se agregaron al cargo.");
+      setAssociationDialogPositionId("");
       try {
         await refreshElection();
       } catch (refreshError) {
@@ -276,6 +281,9 @@ function ElectionConfigurationPage() {
     !election.positions.some((associated) => associated.positionId === position.id) &&
     !associatedPositionIds.includes(position.id)
   );
+  const associationDialogPosition = election.positions.find(
+    (position) => position.electionPositionId === associationDialogPositionId,
+  );
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -300,169 +308,231 @@ function ElectionConfigurationPage() {
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
 
-        <Paper variant="outlined" sx={{ p: { xs: 2.5, md: 3 }, borderColor: "divider", mb: 3 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>Cargos electorales</Typography>
-          <Stack spacing={2}>
-            {positionsError && (
-              <Alert severity="warning">
-                {positionsError} El contrato documenta la consulta de cargos con rol ROLE_VOTER; puedes crear y asociar un cargo nuevo desde aquí.
-              </Alert>
-            )}
-            {availablePositions.length > 0 && (
-              <Box component="form" onSubmit={associatePosition}>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                  <FormControl fullWidth>
-                    <InputLabel id="position-select-label">Cargo existente</InputLabel>
-                    <Select
-                      labelId="position-select-label"
-                      value={selectedPositionId}
-                      label="Cargo existente"
+        <Paper variant="outlined" sx={{ borderColor: "divider", mb: 3, overflow: "hidden" }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_, value: number) => setActiveTab(value)}
+            aria-label="Secciones de configuración de la elección"
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ borderBottom: 1, borderColor: "divider", px: { xs: 1, sm: 2 } }}
+          >
+            <Tab label={`Cargos electorales (${election.positions.length})`} id="configuration-tab-positions" aria-controls="configuration-panel-positions" />
+            <Tab label={`Candidatos (${candidates.length})`} id="configuration-tab-candidates" aria-controls="configuration-panel-candidates" />
+          </Tabs>
+
+          {activeTab === 0 && (
+            <Box role="tabpanel" id="configuration-panel-positions" aria-labelledby="configuration-tab-positions" sx={{ p: { xs: 2.5, md: 3 } }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Define los cargos de esta elección</Typography>
+              <Typography color="text.secondary" sx={{ mb: 3 }}>
+                Asocia cargos existentes o crea nuevos. Después podrás asignarles candidatos desde la pestaña correspondiente.
+              </Typography>
+              <Stack spacing={2}>
+                {positionsError && (
+                  <Alert severity="warning">
+                    {positionsError} El contrato documenta la consulta de cargos con rol ROLE_VOTER; puedes crear y asociar un cargo nuevo desde aquí.
+                  </Alert>
+                )}
+                {availablePositions.length > 0 && (
+                  <Box component="form" onSubmit={associatePosition}>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                      <FormControl fullWidth>
+                        <InputLabel id="position-select-label">Cargo existente</InputLabel>
+                        <Select
+                          labelId="position-select-label"
+                          value={selectedPositionId}
+                          label="Cargo existente"
+                          disabled={!canConfigure || busy}
+                          onChange={(event) => setSelectedPositionId(event.target.value)}
+                        >
+                          {availablePositions.map((position) => (
+                            <MenuItem key={position.id} value={position.id}>{position.positionName}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Button type="submit" variant="outlined" disabled={!canConfigure || !selectedPositionId || busy} sx={{ minWidth: 180 }}>
+                        Asociar cargo
+                      </Button>
+                    </Stack>
+                  </Box>
+                )}
+                {positions.length > 0 && availablePositions.length === 0 && (
+                  <Alert severity="success">Todos los cargos consultados ya están asociados a esta elección.</Alert>
+                )}
+                <Box component="form" onSubmit={createAndAssociatePosition}>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                    <TextField
+                      label="Crear cargo nuevo"
+                      value={newPositionName}
+                      onChange={(event) => setNewPositionName(event.target.value)}
                       disabled={!canConfigure || busy}
-                      onChange={(event) => setSelectedPositionId(event.target.value)}
-                    >
-                      {availablePositions.map((position) => (
-                        <MenuItem key={position.id} value={position.id}>{position.positionName}</MenuItem>
+                      required
+                      fullWidth
+                    />
+                    <Button type="submit" variant="outlined" disabled={!canConfigure || busy} sx={{ minWidth: 180 }}>
+                      Crear y asociar
+                    </Button>
+                  </Stack>
+                </Box>
+                {election.positions.length > 0 && (
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Cargos incluidos</Typography>
+                    <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1 }}>
+                      {election.positions.map((position) => (
+                        <Paper key={position.electionPositionId} variant="outlined" sx={{ px: 1.5, py: 1, borderColor: "divider" }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{position.positionName}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {position.candidacies.length} candidaturas
+                          </Typography>
+                        </Paper>
                       ))}
-                    </Select>
-                  </FormControl>
-                  <Button type="submit" variant="outlined" disabled={!canConfigure || !selectedPositionId || busy} sx={{ minWidth: 180 }}>
-                    Asociar cargo
-                  </Button>
-                </Stack>
-              </Box>
-            )}
-            {positions.length > 0 && availablePositions.length === 0 && (
-              <Alert severity="success">Todos los cargos consultados ya están asociados a esta elección.</Alert>
-            )}
-            <Box component="form" onSubmit={createAndAssociatePosition}>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                <TextField
-                  label="Crear cargo nuevo"
-                  value={newPositionName}
-                  onChange={(event) => setNewPositionName(event.target.value)}
-                  disabled={!canConfigure || busy}
-                  required
-                  fullWidth
-                />
-                <Button type="submit" variant="outlined" disabled={!canConfigure || busy} sx={{ minWidth: 180 }}>
-                  Crear y asociar
-                </Button>
+                    </Stack>
+                  </Box>
+                )}
               </Stack>
             </Box>
-          </Stack>
+          )}
+
+          {activeTab === 1 && (
+            <Box role="tabpanel" id="configuration-panel-candidates" aria-labelledby="configuration-tab-candidates" sx={{ p: { xs: 2.5, md: 3 } }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Candidatos y candidaturas</Typography>
+              <Typography color="text.secondary" sx={{ mb: 3 }}>
+                Registra personas en el catálogo y asígnalas a los cargos de esta elección.
+              </Typography>
+
+              <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, mb: 3, borderColor: "divider" }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>Registrar un candidato nuevo</Typography>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  El contrato del endpoint de creación de candidatos requiere ROLE_VOTER. Si tu cuenta administradora no tiene ese rol, la API rechazará el registro.
+                </Alert>
+                <Box component="form" onSubmit={createCandidate}>
+                  <Stack spacing={2}>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                      <TextField label="Nombre" value={newCandidate.name} onChange={(event) => setNewCandidate({ ...newCandidate, name: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
+                      <TextField label="Apellido" value={newCandidate.lastName} onChange={(event) => setNewCandidate({ ...newCandidate, lastName: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
+                    </Stack>
+                    <TextField label="Descripción" value={newCandidate.description} onChange={(event) => setNewCandidate({ ...newCandidate, description: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 100 } }} fullWidth />
+                    <Box><Button type="submit" variant="outlined" startIcon={<PersonAddAlt1Outlined />} disabled={!canConfigure || busy}>Registrar candidato</Button></Box>
+                  </Stack>
+                </Box>
+              </Paper>
+
+              {candidateError && (
+                <Alert
+                  severity="warning"
+                  sx={{ mb: 2 }}
+                  action={
+                    <Button color="inherit" size="small" onClick={() => void reloadCandidates()} disabled={candidateLoading}>
+                      {candidateLoading ? "Consultando..." : "Reintentar"}
+                    </Button>
+                  }
+                >
+                  No se pudo cargar el catálogo de candidatos: {candidateError}
+                </Alert>
+              )}
+              {election.positions.length === 0 ? (
+                <Alert severity="info">Agrega al menos un cargo desde la pestaña «Cargos electorales» para asignar candidaturas.</Alert>
+              ) : (
+                <Stack spacing={1.5}>
+                  {election.positions.map((position) => (
+                    <Paper key={position.electionPositionId} variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, borderColor: "divider" }}>
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>
+                        <Box>
+                          <Typography variant="h6">{position.positionName}</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                            {position.candidacies.length} candidaturas asociadas
+                          </Typography>
+                          {position.candidacies.length > 0 && (
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              {position.candidacies.map((candidacy) => `${candidacy.candidate.name} ${candidacy.candidate.lastName}`).join(" · ")}
+                            </Typography>
+                          )}
+                        </Box>
+                        <Button
+                          variant="outlined"
+                          startIcon={<PersonAddAlt1Outlined />}
+                          disabled={!canConfigure || busy || candidateLoading || candidates.length === 0}
+                          onClick={() => setAssociationDialogPositionId(position.electionPositionId)}
+                        >
+                          Asignar candidatos
+                        </Button>
+                      </Stack>
+                      {candidates.length === 0 && (
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                          {candidateLoading
+                            ? "Consultando candidatos..."
+                            : candidateError
+                              ? "La consulta del catálogo falló; usa la opción de reintento para volver a cargarlo."
+                              : "No hay candidatos registrados para asociar a este cargo."}
+                        </Alert>
+                      )}
+                    </Paper>
+                  ))}
+                </Stack>
+              )}
+            </Box>
+          )}
         </Paper>
 
-        <Accordion variant="outlined" sx={{ mb: 3, borderColor: "divider" }}>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Box>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>Registrar un candidato nuevo</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Usa esta opción si la persona todavía no aparece en el catálogo.
-              </Typography>
-            </Box>
-          </AccordionSummary>
-          <AccordionDetails>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            El contrato del endpoint de creación de candidatos requiere ROLE_VOTER. Si tu cuenta administradora no tiene ese rol, la API rechazará el registro.
-          </Alert>
-          <Box component="form" onSubmit={createCandidate}>
-            <Stack spacing={2}>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <TextField label="Nombre" value={newCandidate.name} onChange={(event) => setNewCandidate({ ...newCandidate, name: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
-                <TextField label="Apellido" value={newCandidate.lastName} onChange={(event) => setNewCandidate({ ...newCandidate, lastName: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
-              </Stack>
-              <TextField label="Descripción" value={newCandidate.description} onChange={(event) => setNewCandidate({ ...newCandidate, description: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 100 } }} fullWidth />
-              <Box><Button type="submit" variant="outlined" startIcon={<PersonAddAlt1Outlined />} disabled={!canConfigure || busy}>Registrar candidato</Button></Box>
-            </Stack>
-          </Box>
-          </AccordionDetails>
-        </Accordion>
+        <Dialog
+          open={Boolean(associationDialogPosition)}
+          onClose={() => !busy && setAssociationDialogPositionId("")}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Asignar candidatos · {associationDialogPosition?.positionName}</DialogTitle>
+          <DialogContent>
+            {associationDialogPosition && (() => {
+              const { electionPositionId } = associationDialogPosition;
+              const availableCandidates = candidates.filter((candidate) =>
+                candidate.isActive &&
+                !associationDialogPosition.candidacies.some((item) => item.candidate.id === candidate.id) &&
+                !(associatedCandidateIds[electionPositionId] ?? []).includes(candidate.id)
+              );
+              const selectedOptions = availableCandidates.filter((candidate) =>
+                (selectedCandidates[electionPositionId] ?? []).includes(candidate.id)
+              );
 
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>Asociar candidatos a los cargos</Typography>
-        <Typography color="text.secondary" sx={{ mb: 2 }}>
-          Selecciona candidatos del catálogo existente para cada cargo. Los que ya fueron asociados no volverán a aparecer.
-        </Typography>
-        {candidateError && (
-          <Alert
-            severity="warning"
-            sx={{ mb: 2 }}
-            action={
-              <Button color="inherit" size="small" onClick={() => void reloadCandidates()} disabled={candidateLoading}>
-                {candidateLoading ? "Consultando..." : "Reintentar"}
-              </Button>
-            }
-          >
-            No se pudo cargar el catálogo de candidatos: {candidateError}
-          </Alert>
-        )}
-        {election.positions.length === 0 && <Alert severity="info" sx={{ mb: 2 }}>Agrega al menos un cargo para asignar candidaturas.</Alert>}
-        <Stack spacing={2}>
-          {election.positions.map((position) => (
-            <Paper key={position.electionPositionId} variant="outlined" sx={{ p: { xs: 2, md: 3 }, borderColor: "divider" }}>
-              <Typography variant="h6">{position.positionName}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                {position.candidacies.length} candidaturas asociadas
-              </Typography>
-              {candidates.length === 0 ? (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  {candidateLoading
-                    ? "Consultando candidatos..."
-                    : candidateError
-                      ? "La consulta del catálogo falló; usa la opción de reintento para volver a cargarlo."
-                      : "No hay candidatos registrados para asociar a este cargo."}
-                </Alert>
-              ) : (
-                <>
-                  {(() => {
-                    const availableCandidates = candidates.filter((candidate) =>
-                      candidate.isActive &&
-                      !position.candidacies.some((item) => item.candidate.id === candidate.id) &&
-                      !(associatedCandidateIds[position.electionPositionId] ?? []).includes(candidate.id)
-                    );
-                    const selectedOptions = availableCandidates.filter((candidate) =>
-                      (selectedCandidates[position.electionPositionId] ?? []).includes(candidate.id)
-                    );
+              if (availableCandidates.length === 0) {
+                return <Alert severity="success" sx={{ mt: 1 }}>Todos los candidatos activos ya están asociados a este cargo.</Alert>;
+              }
 
-                    if (availableCandidates.length === 0) {
-                      return <Alert severity="success" sx={{ mt: 2 }}>Todos los candidatos activos ya están asociados a este cargo.</Alert>;
-                    }
-
-                    return (
-                      <Autocomplete
-                        multiple
-                        options={availableCandidates}
-                        value={selectedOptions}
-                        getOptionLabel={(candidate) => `${candidate.name} ${candidate.lastName}`}
-                        isOptionEqualToValue={(option, value) => option.id === value.id}
-                        onChange={(_, selected) => setSelectedCandidates((current) => ({
-                          ...current,
-                          [position.electionPositionId]: selected.map((candidate) => candidate.id),
-                        }))}
-                        disabled={!canConfigure || busy}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Candidatos registrados"
-                            placeholder="Buscar y seleccionar candidatos"
-                            sx={{ mt: 2 }}
-                          />
-                        )}
-                      />
-                    );
-                  })()}
-                  <Button
-                    variant="outlined"
-                    startIcon={<PersonAddAlt1Outlined />}
-                    disabled={!canConfigure || busy || !(selectedCandidates[position.electionPositionId]?.length)}
-                    onClick={() => void addCandidacies(position.electionPositionId)}
-                  >
-                    Agregar candidaturas
-                  </Button>
-                </>
-              )}
-            </Paper>
-          ))}
-        </Stack>
+              return (
+                <Autocomplete
+                  multiple
+                  options={availableCandidates}
+                  value={selectedOptions}
+                  getOptionLabel={(candidate) => `${candidate.name} ${candidate.lastName}`}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  onChange={(_, selected) => setSelectedCandidates((current) => ({
+                    ...current,
+                    [electionPositionId]: selected.map((candidate) => candidate.id),
+                  }))}
+                  disabled={!canConfigure || busy}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Candidatos registrados"
+                      placeholder="Buscar y seleccionar candidatos"
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                />
+              );
+            })()}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2.5 }}>
+            <Button onClick={() => setAssociationDialogPositionId("")} disabled={busy}>Cancelar</Button>
+            <Button
+              variant="contained"
+              startIcon={<PersonAddAlt1Outlined />}
+              disabled={!canConfigure || busy || !(selectedCandidates[associationDialogPositionId]?.length)}
+              onClick={() => void addCandidacies(associationDialogPositionId)}
+            >
+              {busy ? "Guardando..." : "Agregar candidaturas"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Paper variant="outlined" sx={{ mt: 4, p: { xs: 2.5, md: 3 }, borderColor: "divider" }}>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "center" } }}>

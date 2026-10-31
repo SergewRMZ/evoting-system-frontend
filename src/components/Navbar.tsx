@@ -16,7 +16,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 import { useKeycloak } from "../auth/useKeycloak";
 import { ColorModeContext } from "../theme/ColorModeContext";
 import keycloak from "../auth/keycloakConfig";
@@ -24,8 +24,11 @@ import keycloak from "../auth/keycloakConfig";
 function Navbar() {
   const { handleLogout, authenticated, roles } = useKeycloak();
   const { mode, toggleColorMode } = useContext(ColorModeContext);
+  const { pathname } = useLocation();
   const isAdmin = roles.includes("ROLE_ADMIN");
   const isAuthority = roles.includes("ROLE_AUTHORITY");
+  const electionPath = isAuthority ? "/authority" : "/vote";
+  const electionLabel = isAuthority ? "Revisión electoral" : "Elecciones";
 
   /**
    * Redirige al usuario a la Consola de Cuenta de Keycloak.
@@ -68,7 +71,7 @@ function Navbar() {
           <Stack
             direction="row"
             spacing={{ xs: 0.5, sm: 1.5 }}
-            sx={{ alignItems: "center" }}
+            sx={{ alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}
           >
             {/* Alternar tema */}
             <Button
@@ -97,30 +100,27 @@ function Navbar() {
               <>
                 <Button
                   component={RouterLink}
-                  to="/vote"
+                  to={electionPath}
                   color="inherit"
-                  sx={{ color: "text.secondary" }}
+                  aria-current={pathname.startsWith(electionPath) ? "page" : undefined}
+                  sx={{
+                    color: pathname.startsWith(electionPath) ? "primary.main" : "text.secondary",
+                    bgcolor: pathname.startsWith(electionPath) ? "action.selected" : undefined,
+                  }}
                 >
-                  Elecciones
+                  {electionLabel}
                 </Button>
-
-                {isAuthority && (
-                  <Button
-                    component={RouterLink}
-                    to="/authority"
-                    color="inherit"
-                    sx={{ color: "text.secondary" }}
-                  >
-                    Revisión
-                  </Button>
-                )}
 
                 {isAdmin && (
                   <Button
                     component={RouterLink}
                     to="/admin"
                     color="inherit"
-                    sx={{ color: "text.secondary" }}
+                    aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+                    sx={{
+                      color: pathname.startsWith("/admin") ? "primary.main" : "text.secondary",
+                      bgcolor: pathname.startsWith("/admin") ? "action.selected" : undefined,
+                    }}
                   >
                     Administración
                   </Button>
