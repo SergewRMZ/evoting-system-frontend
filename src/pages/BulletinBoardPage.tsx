@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
 import {
   ArrowBack,
   Search,
@@ -34,7 +33,7 @@ import type {
   BulletinBoardPage as BulletinBoardPageData,
   BulletinBoardVote,
 } from "../services/bulletin-board-service/bulletin-board.types";
-import { getApiErrorMessage } from "../utils/apiError";
+import { getApiErrorMessage } from "../errors/apiErrorMap";
 import { canonicalize } from "json-canonicalize";
 import { sha3_384Hash, Uint8ArrayToBase64 } from "../crypto/crypto.utils";
 
@@ -85,7 +84,7 @@ function BulletinBoardPage() {
         }
       })
       .catch((loadError: unknown) => {
-        if (active) setError(getApiErrorMessage(loadError, "No se pudo cargar el tablón público."));
+        if (active) setError(getApiErrorMessage(loadError, "bulletin-board", "No se pudo cargar el tablón público."));
       })
       .finally(() => {
         if (active) {
@@ -99,8 +98,7 @@ function BulletinBoardPage() {
     };
   }, [electionId, pageNumber]);
 
-  const searchVote = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const searchVote = async () => {
     if (!electionId || !voteIdInput.trim()) return;
     setSearching(true);
     setSearchError("");
@@ -117,7 +115,7 @@ function BulletinBoardPage() {
         setSearchError("No se encontró un registro con ese identificador.");
       }
     } catch (searchFailure) {
-      setSearchError(getApiErrorMessage(searchFailure, "No se pudo buscar el registro."));
+      setSearchError(getApiErrorMessage(searchFailure, "bulletin-board", "No se pudo buscar el registro."));
     } finally {
       setSearching(false);
     }

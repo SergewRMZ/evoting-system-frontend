@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
 import {
   ArrowBack,
   CampaignOutlined,
@@ -34,7 +33,7 @@ import type {
   ElectionDetails,
   Position,
 } from "../services/election-service/election.types";
-import { getApiErrorMessage } from "../utils/apiError";
+import { getApiErrorMessage } from "../errors/apiErrorMap";
 
 function ElectionConfigurationPage() {
   const { electionId } = useParams<{ electionId: string }>();
@@ -83,21 +82,21 @@ function ElectionConfigurationPage() {
       if (electionResult.status === "fulfilled") {
         setElection(electionResult.value);
       } else {
-        setError(getApiErrorMessage(electionResult.reason, "No se pudo cargar la elección."));
+        setError(getApiErrorMessage(electionResult.reason, "tally", "No se pudo cargar la elección."));
       }
 
       if (positionsResult.status === "fulfilled") {
         setPositions(positionsResult.value);
         setPositionsError("");
       } else {
-        setPositionsError(getApiErrorMessage(positionsResult.reason, "No se pudieron consultar los cargos existentes."));
+        setPositionsError(getApiErrorMessage(positionsResult.reason, "election", "No se pudieron consultar los cargos existentes."));
       }
 
       if (candidatesResult.status === "fulfilled") {
         setCandidates(candidatesResult.value);
         setCandidateError("");
       } else {
-        setCandidateError(getApiErrorMessage(candidatesResult.reason, "No se pudieron consultar los candidatos existentes."));
+        setCandidateError(getApiErrorMessage(candidatesResult.reason, "election", "No se pudieron consultar los candidatos existentes."));
       }
       setLoading(false);
     };
@@ -108,8 +107,7 @@ function ElectionConfigurationPage() {
     };
   }, [electionId]);
 
-  const associatePosition = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const associatePosition = async () => {
     if (!electionId || !selectedPositionId) return;
     if (election?.positions.some((position) => position.positionId === selectedPositionId) ||
       associatedPositionIds.includes(selectedPositionId)) {
@@ -128,17 +126,16 @@ function ElectionConfigurationPage() {
       try {
         await refreshElection();
       } catch (refreshError) {
-        setError(`El cargo se asoció, pero no se pudo actualizar el detalle: ${getApiErrorMessage(refreshError, "error desconocido")}`);
+        setError(`El cargo se asoció, pero no se pudo actualizar el detalle: ${getApiErrorMessage(refreshError, "generic", "error desconocido")}`);
       }
     } catch (operationError) {
-      setError(getApiErrorMessage(operationError, "No se pudo asociar el cargo."));
+      setError(getApiErrorMessage(operationError, "election", "No se pudo asociar el cargo."));
     } finally {
       setBusy(false);
     }
   };
 
-  const createAndAssociatePosition = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const createAndAssociatePosition = async () => {
     if (!electionId) return;
     if (!newPositionName.trim()) {
       setError("Escribe el nombre del cargo electoral.");
@@ -156,14 +153,13 @@ function ElectionConfigurationPage() {
       setNewPositionName("");
       setMessage("El cargo se creó y se asoció a la elección.");
     } catch (operationError) {
-      setError(getApiErrorMessage(operationError, "No se pudo crear o asociar el cargo."));
+      setError(getApiErrorMessage(operationError, "election", "No se pudo crear o asociar el cargo."));
     } finally {
       setBusy(false);
     }
   };
 
-  const createCandidate = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const createCandidate = async () => {
     if (!newCandidate.name.trim() || !newCandidate.lastName.trim() || !newCandidate.description.trim()) {
       setError("Completa el nombre, apellido y descripción del candidato.");
       return;
@@ -181,7 +177,7 @@ function ElectionConfigurationPage() {
       setNewCandidate({ name: "", lastName: "", description: "" });
       setMessage("El candidato se registró correctamente.");
     } catch (operationError) {
-      setError(getApiErrorMessage(operationError, "No se pudo registrar el candidato."));
+      setError(getApiErrorMessage(operationError, "election", "No se pudo registrar el candidato."));
     } finally {
       setBusy(false);
     }
@@ -215,10 +211,10 @@ function ElectionConfigurationPage() {
       try {
         await refreshElection();
       } catch (refreshError) {
-        setError(`Las candidaturas se agregaron, pero no se pudo actualizar el detalle: ${getApiErrorMessage(refreshError, "error desconocido")}`);
+        setError(`Las candidaturas se agregaron, pero no se pudo actualizar el detalle: ${getApiErrorMessage(refreshError, "generic", "error desconocido")}`);
       }
     } catch (operationError) {
-      setError(getApiErrorMessage(operationError, "No se pudieron agregar las candidaturas."));
+      setError(getApiErrorMessage(operationError, "election", "No se pudieron agregar las candidaturas."));
     } finally {
       setBusy(false);
     }
@@ -232,7 +228,7 @@ function ElectionConfigurationPage() {
       await electionServiceApi.publishElection(electionId);
       navigate(`/vote/${electionId}`);
     } catch (publishError) {
-      setError(getApiErrorMessage(publishError, "No se pudo publicar la elección."));
+      setError(getApiErrorMessage(publishError, "election", "No se pudo publicar la elección."));
     } finally {
       setBusy(false);
     }

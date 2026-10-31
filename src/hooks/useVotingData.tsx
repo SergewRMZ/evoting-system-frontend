@@ -5,7 +5,7 @@ import type { ElectionDetails } from "../services/election-service/election.type
 import type { EncryptionPublicKey } from "../services/tally-service/tally-service.types";
 import type { AuthorizationPublicKey } from "../services/authorization-service/authorization.types";
 import authorizationServiceApi from "../services/authorization-service/authorization.api";
-import { getApiErrorMessage } from "../utils/apiError";
+import { getApiErrorMessage } from "../errors/apiErrorMap";
 
 const useVotingData = (electionId: string | undefined) => {
     const [election, setElection] = useState<ElectionDetails | null>(null);
@@ -36,7 +36,7 @@ const useVotingData = (electionId: string | undefined) => {
                 setEncryptionPublicKey(encryptionPublicKey);
                 setAuthorizationPublicKey(authorizationPublicKey);
             }   catch (error) {
-                setError(new Error(getApiErrorMessage(error, "No se pudo cargar la información de la elección."), { cause: error }));
+                setError(new Error(getApiErrorMessage(error, "election", "No se pudo cargar la información de la elección."), { cause: error }));
             }   finally {
                 setLoading(false);
             }

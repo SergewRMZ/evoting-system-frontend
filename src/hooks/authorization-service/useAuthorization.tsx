@@ -6,7 +6,7 @@ import { createBlindedVoteMessage, unblindVote } from "../../utils/voting/vote.u
 import type { ElectionDetails } from "../../services/election-service/election.types";
 import { Uint8ArrayToBase64 } from "../../crypto/crypto.utils";
 import type { SignedVote } from "../../types/vote.types";
-import { getApiErrorMessage } from "../../utils/apiError";
+import { getApiErrorMessage } from "../../errors/apiErrorMap";
 
 const useAuthorization = () => {
     const[loading, setLoading] = useState(false);
@@ -57,9 +57,11 @@ const useAuthorization = () => {
                 signature
             };
         }   catch(error) {
-            throw new Error(getApiErrorMessage(error, "No se pudo autorizar el voto."), { cause: error });
+            throw new Error(
+                getApiErrorMessage(error, "authorization", "No se pudo autorizar el voto."),
+                { cause: error }
+            );
         }   
-        
         finally {
             setLoading(false);
         }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Election } from "../../services/election-service/election.types";
 import electionServiceApi from "../../services/election-service/election.api";
-import { getApiErrorMessage } from "../../utils/apiError";
+import { getApiErrorMessage } from "../../errors/apiErrorMap";
 
 const useElections = () => {
     const [elections, setElections] = useState<Election[]>([]);
@@ -15,7 +15,7 @@ const useElections = () => {
                 const data = await electionServiceApi.getElections();
                 setElections(data);
             }   catch (error) {
-                setError(new Error(getApiErrorMessage(error, "No se pudieron cargar las elecciones."), { cause: error }));
+                setError(new Error(getApiErrorMessage(error, "election", "No se pudieron cargar las elecciones."), { cause: error }));
             } finally {
                 setLoading(false);
             }

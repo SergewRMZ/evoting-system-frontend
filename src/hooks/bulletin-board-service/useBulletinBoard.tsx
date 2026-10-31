@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { SignedVote } from "../../types/vote.types";
 import bulletinBoardServiceApi from "../../services/bulletin-board-service/bulletin-board.api";
-import { getApiErrorMessage } from "../../utils/apiError";
+import { getApiErrorMessage } from "../../errors/apiErrorMap";
 import axios from "axios";
 
 export class VoteAlreadyRegisteredError extends Error {
@@ -35,7 +35,7 @@ const useBulletinBoard = () => {
             if (axios.isAxiosError(error) && error.response?.status === 409) {
                 throw new VoteAlreadyRegisteredError(getVoteIdFromConflict(error));
             }
-            throw new Error(getApiErrorMessage(error, "No se pudo registrar el voto."), { cause: error });
+            throw new Error(getApiErrorMessage(error, "bulletin-board", "No se pudo registrar el voto."), { cause: error });
         }
     }
 

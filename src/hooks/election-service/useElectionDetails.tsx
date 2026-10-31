@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { type ElectionDetails } from "../../services/election-service/election.types";
 import electionServiceApi from "../../services/election-service/election.api";
-import { getApiErrorMessage } from "../../utils/apiError";
+import { getApiErrorMessage } from "../../errors/apiErrorMap";
 
 const useElectionDetails = (electionId: string | undefined) => {
     const [election, setElection] = useState<ElectionDetails | null>(null);
@@ -20,7 +20,7 @@ const useElectionDetails = (electionId: string | undefined) => {
             setElection(data);
             setLoadedElectionId(electionId);
         } catch (loadError) {
-            setError(new Error(getApiErrorMessage(loadError, "No se pudo cargar la elección."), { cause: loadError }));
+            setError(new Error(getApiErrorMessage(loadError, "election"), { cause: loadError }));
             throw loadError;
         } finally {
             setLoading(false);
@@ -39,7 +39,7 @@ const useElectionDetails = (electionId: string | undefined) => {
             })
             .catch((loadError: unknown) => {
                 if (active) {
-                    setError(new Error(getApiErrorMessage(loadError, "No se pudo cargar la elección."), { cause: loadError }));
+                    setError(new Error(getApiErrorMessage(loadError, "election"), { cause: loadError }));
                     setLoadedElectionId(electionId);
                 }
             })

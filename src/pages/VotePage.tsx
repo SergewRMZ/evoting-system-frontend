@@ -29,14 +29,21 @@ import FeedbackAlert from "../components/FeedbackAlert";
 import useVotingData from "../hooks/useVotingData";
 import useAuthorization from "../hooks/authorization-service/useAuthorization";
 import type { SignedVote } from "../types/vote.types";
-import useBulletinBoard, { VoteAlreadyRegisteredError } from "../hooks/bulletin-board-service/useBulletinBoard";
-import { useKeycloak } from "../auth/useKeycloak";
+import useBulletinBoard, {
+  VoteAlreadyRegisteredError,
+} from "../hooks/bulletin-board-service/useBulletinBoard";
+import { mapApiError } from "../errors/apiErrorMap";
 
 type SubmissionFeedback = {
   message: string;
   severity: AlertColor;
 };
 
+/**
+ * Vista del proceso de votación.
+ * Acceso controlado exclusivamente por la ruta protegida (ROLE_VOTER).
+ * No se expone el rol directamente al usuario; solo se muestra el flujo de voto.
+ */
 function VotePage() {
   const { electionId } = useParams<{ electionId: string }>();
   const {
@@ -49,11 +56,13 @@ function VotePage() {
 
   const { authorizeVote } = useAuthorization();
   const { submitVote } = useBulletinBoard();
-  const { roles } = useKeycloak();
 
-  const [selectedCandidacies, setSelectedCandidacies] = useState<Record<string, string>>({});
+  const [selectedCandidacies, setSelectedCandidacies] = useState<
+    Record<string, string>
+  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionFeedback, setSubmissionFeedback] = useState<SubmissionFeedback | null>(null);
+  const [submissionFeedback, setSubmissionFeedback] =
+    useState<SubmissionFeedback | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [voteSubmitted, setVoteSubmitted] = useState(false);
 
@@ -72,26 +81,39 @@ function VotePage() {
       >
         <FeedbackAlert
           severity="error"
-          message={error?.message ?? "No se pudo cargar la información de la elección. Intenta recargar la página."}
+          message={
+            error
+              ? mapApiError(error, "election").message
+              : "No se pudo cargar la información de la elección. Intenta recargar la página."
+          }
         />
       </Box>
     );
   }
 
-  if (!roles.includes("ROLE_VOTER") || election.status !== "ACTIVE") {
+  // La elección debe estar activa para poder votar
+  if (election.status !== "ACTIVE") {
     return (
       <Container sx={{ py: 6 }}>
         <Alert severity="warning">
-          Esta elección no está activa o tu perfil no tiene permiso para emitir un voto.
+          Esta elección no se encuentra activa en este momento. No es posible
+          emitir un voto.
         </Alert>
-        <Button component={RouterLink} to={`/vote/${election.electionId}`} sx={{ mt: 2 }}>
+        <Button
+          component={RouterLink}
+          to={`/vote/${election.electionId}`}
+          sx={{ mt: 2 }}
+        >
           Volver al detalle
         </Button>
       </Container>
     );
   }
 
-  const selectCandidacy = (electionPositionId: string, candidacyId: string) => {
+  const selectCandidacy = (
+    electionPositionId: string,
+    candidacyId: string
+  ) => {
     if (voteSubmitted) return;
     setSubmissionFeedback(null);
     setSelectedCandidacies((current) => ({
@@ -101,55 +123,52 @@ function VotePage() {
   };
 
   const prepareVoteSubmission = async () => {
-        if (isSubmitting) return;
+    if (isSubmitting) return;
 
-        setIsSubmitting(true);
-        setSubmissionFeedback({
+    setIsSubmitting(true);
+    setSubmissionFeedback({
+      severity: "info",
+      message: "Preparando y cifrando tu voto de forma segura...",
+    });
+
+    try {
+      setSubmissionFeedback({
         severity: "info",
-        message: "Preparando y cifrando tu voto de forma segura...",
+        message: "Tu voto está siendo autorizado. Por favor, espera...",
+      });
+
+      const authorizedVote: SignedVote = await authorizeVote(
+        election,
+        selectedCandidacies,
+        encryptionPublicKey,
+        authorizationPublicKey
+      );
+
+      const registration = await submitVote(authorizedVote, election.electionId);
+
+      setVoteSubmitted(true);
+      setSubmissionFeedback({
+        severity: "success",
+        message: `Tu voto se emitió correctamente y quedó registrado. Identificador: ${registration.voteId}`,
+      });
+    } catch (err) {
+      if (err instanceof VoteAlreadyRegisteredError) {
+        setVoteSubmitted(true);
+        setSubmissionFeedback({
+          severity: "success",
+          message: err.voteId
+            ? `Tu voto ya había sido emitido y registrado. Identificador: ${err.voteId}`
+            : "Tu voto ya había sido emitido y registrado para esta elección. No se volvió a enviar.",
         });
-
-        try {
-            setSubmissionFeedback({
-                severity: "info",
-                message: "Tu voto está siendo autorizado. Por favor, espera...",
-            });
-
-            const authorizedVote: SignedVote = await authorizeVote(
-                election,
-                selectedCandidacies,
-                encryptionPublicKey,
-                authorizationPublicKey,
-            );
-
-            const registration = await submitVote(authorizedVote, election.electionId);
-
-            setVoteSubmitted(true);
-            setSubmissionFeedback({
-                severity: "success",
-                message: `Tu voto se emitió correctamente y quedó registrado. Identificador: ${registration.voteId}`,
-            });
-        } catch (error) {
-            if (error instanceof VoteAlreadyRegisteredError) {
-              setVoteSubmitted(true);
-              setSubmissionFeedback({
-                severity: "success",
-                message: error.voteId
-                  ? `Tu voto ya había sido emitido y registrado. Identificador: ${error.voteId}`
-                  : "Tu voto ya había sido emitido y registrado para esta elección. No se volvió a enviar.",
-              });
-              return;
-            }
-            setSubmissionFeedback({
-                severity: "error",
-                message:
-                error instanceof Error
-                    ? error.message
-                    : "Ha ocurrido un error al autorizar tu voto. Inténtalo nuevamente.",
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
+        return;
+      }
+      setSubmissionFeedback({
+        severity: "error",
+        message: err.message
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const selectedCount = Object.keys(selectedCandidacies).length;
@@ -157,7 +176,8 @@ function VotePage() {
     if (selectedCount !== election.positions.length) {
       setSubmissionFeedback({
         severity: "error",
-        message: "Selecciona una candidatura para cada cargo antes de continuar.",
+        message:
+          "Selecciona una candidatura para cada cargo antes de continuar.",
       });
       return;
     }
@@ -270,10 +290,18 @@ function VotePage() {
                 )
               }
               onClick={submitForReview}
-              disabled={isSubmitting || voteSubmitted || election.positions.length === 0}
+              disabled={
+                isSubmitting ||
+                voteSubmitted ||
+                election.positions.length === 0
+              }
               sx={{ px: 3, whiteSpace: "nowrap" }}
             >
-              {isSubmitting ? "Procesando voto..." : voteSubmitted ? "Voto emitido" : "Revisar y continuar"}
+              {isSubmitting
+                ? "Procesando voto..."
+                : voteSubmitted
+                  ? "Voto emitido"
+                  : "Revisar y continuar"}
             </Button>
           </Stack>
           {submissionFeedback && (
@@ -283,7 +311,11 @@ function VotePage() {
                 message={submissionFeedback.message}
               />
               {voteSubmitted && (
-                <Button component={RouterLink} to={`/vote/${election.electionId}/bulletin`} sx={{ mt: 1 }}>
+                <Button
+                  component={RouterLink}
+                  to={`/vote/${election.electionId}/bulletin`}
+                  sx={{ mt: 1 }}
+                >
                   Consultar tablón público
                 </Button>
               )}
@@ -299,22 +331,39 @@ function VotePage() {
           votos.
         </Typography>
       </Container>
-      <Dialog open={reviewOpen} onClose={() => !isSubmitting && setReviewOpen(false)} fullWidth maxWidth="sm">
+
+      <Dialog
+        open={reviewOpen}
+        onClose={() => !isSubmitting && setReviewOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>Confirma tus selecciones</DialogTitle>
         <DialogContent dividers>
           <Typography color="text.secondary" sx={{ mb: 2 }}>
-            Verifica tu selección para cada cargo. Al confirmar, el voto se cifrará y se enviará para su autorización y registro.
+            Verifica tu selección para cada cargo. Al confirmar, el voto se
+            cifrará y se enviará para su autorización y registro.
           </Typography>
           <Stack spacing={1.5}>
             {election.positions.map((position) => {
               const candidacy = position.candidacies.find(
-                (item) => item.candidacyId === selectedCandidacies[position.electionPositionId],
+                (item) =>
+                  item.candidacyId ===
+                  selectedCandidacies[position.electionPositionId]
               );
               return (
-                <Paper key={position.electionPositionId} variant="outlined" sx={{ p: 1.5, borderColor: "divider" }}>
-                  <Typography variant="caption" color="text.secondary">{position.positionName}</Typography>
+                <Paper
+                  key={position.electionPositionId}
+                  variant="outlined"
+                  sx={{ p: 1.5, borderColor: "divider" }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {position.positionName}
+                  </Typography>
                   <Typography sx={{ fontWeight: 700 }}>
-                    {candidacy ? `${candidacy.candidate.name} ${candidacy.candidate.lastName}` : "Sin selección"}
+                    {candidacy
+                      ? `${candidacy.candidate.name} ${candidacy.candidate.lastName}`
+                      : "Sin selección"}
                   </Typography>
                 </Paper>
               );
@@ -322,7 +371,12 @@ function VotePage() {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setReviewOpen(false)} disabled={isSubmitting}>Volver a editar</Button>
+          <Button
+            onClick={() => setReviewOpen(false)}
+            disabled={isSubmitting}
+          >
+            Volver a editar
+          </Button>
           <Button
             variant="contained"
             onClick={() => {

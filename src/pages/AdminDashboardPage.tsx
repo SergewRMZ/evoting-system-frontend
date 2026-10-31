@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { FormEvent } from "react";
 import { Add, ArrowForward, HowToVoteOutlined } from "@mui/icons-material";
 import {
   Alert,
@@ -20,7 +19,7 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import useElections from "../hooks/election-service/useElections";
 import electionServiceApi from "../services/election-service/election.api";
-import { getApiErrorMessage } from "../utils/apiError";
+import { getApiErrorMessage } from "../errors/apiErrorMap";
 
 function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -33,8 +32,7 @@ function AdminDashboardPage() {
   const [formError, setFormError] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const createElection = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const createElection = async () => {
     setFormError("");
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -58,7 +56,8 @@ function AdminDashboardPage() {
       setCreateDialogOpen(false);
       navigate(`/admin/elections/${created.electionId}`);
     } catch (createError) {
-      setFormError(getApiErrorMessage(createError, "No se pudo crear la elección."));
+      setFormError(getApiErrorMessage(
+        createError, "election", "No se pudo crear la elección."));
     } finally {
       setCreating(false);
     }

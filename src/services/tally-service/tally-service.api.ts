@@ -1,5 +1,6 @@
 import { apiClient  } from "../../api/apiClient";
 import type { ElectionTallyResult, EncryptionKey, EncryptionPublicKey } from "./tally-service.types";
+
 const tallyServiceApi = {
     getPublicKey: async (electionId: string): Promise<EncryptionPublicKey> => {
         const response = await apiClient.get(`/api/tally-service/elections/${encodeURIComponent(electionId)}/encryption-keys/public`);
@@ -17,7 +18,17 @@ const tallyServiceApi = {
     },
 
     tallyElection: async (electionId: string): Promise<ElectionTallyResult[]> => {
-        const response = await apiClient.post(`/api/tally-service/elections/${encodeURIComponent(electionId)}/tally`);
+        const response = await apiClient.post(`/api/tally-service/elections/${encodeURIComponent(electionId)}/tallies`);
+        return response.data;
+    },
+
+    /**
+     * GET /api/tally-service/elections/{electionId}/results
+     * Devuelve los resultados calculados de una elección FINISHED.
+     * Roles: ROLE_VOTER | ROLE_AUTHORITY | ROLE_ADMIN
+     */
+    getResults: async (electionId: string): Promise<ElectionTallyResult[]> => {
+        const response = await apiClient.get(`/api/tally-service/elections/${encodeURIComponent(electionId)}/results`);
         return response.data;
     },
 }

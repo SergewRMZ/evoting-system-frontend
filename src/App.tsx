@@ -6,6 +6,8 @@ import theme from "./theme";
 import { useMemo, useState } from "react";
 import type { ColorMode } from "./theme/ColorModeContext";
 import { ColorModeContext } from "./theme/ColorModeContext";
+import { GlobalErrorProvider } from "./errors/GlobalErrorProvider";
+import GlobalAlertBanner from "./components/GlobalAlertBanner";
 
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
@@ -31,9 +33,12 @@ function App() {
     <ColorModeContext.Provider value={colorMode}>
       <ThemeProvider theme={appTheme}>
         <CssBaseline />
-        <KeycloakProvider>
-          <AppRouter />
-        </KeycloakProvider>
+        <GlobalErrorProvider>
+          <GlobalAlertBanner />
+          <KeycloakProvider>
+            <AppRouter />
+          </KeycloakProvider>
+        </GlobalErrorProvider>
       </ThemeProvider>
     </ColorModeContext.Provider>
   )

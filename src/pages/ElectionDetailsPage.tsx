@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ArrowBack,
+  BarChartOutlined,
   HowToVoteOutlined,
   ManageSearchOutlined,
   SettingsOutlined,
@@ -29,7 +30,7 @@ import electionServiceApi from "../services/election-service/election.api";
 import authorizationServiceApi from "../services/authorization-service/authorization.api";
 import tallyServiceApi from "../services/tally-service/tally-service.api";
 import type { ElectionTallyResult } from "../services/tally-service/tally-service.types";
-import { getApiErrorMessage } from "../utils/apiError";
+import { getApiErrorMessage } from "../errors/apiErrorMap";
 import type { ElectionStatus } from "../services/election-service/election.types";
 
 const labels: Record<ElectionStatus, string> = {
@@ -64,7 +65,11 @@ function ElectionDetailsPage() {
   if (error || !election) {
     return (
       <Container sx={{ py: 6 }}>
-        <Alert severity="error">{error?.message ?? "No se encontró la elección."}</Alert>
+        <Alert severity="error">
+          {error
+            ? getApiErrorMessage(error, "election")
+            : "No se encontró la elección."}
+        </Alert>
       </Container>
     );
   }
@@ -80,7 +85,7 @@ function ElectionDetailsPage() {
       }
       setActionMessage("La operación se completó correctamente.");
     } catch (actionError) {
-      setActionError(getApiErrorMessage(actionError, "No se pudo completar la operación."));
+      setActionError(getApiErrorMessage(actionError, "election"));
     } finally {
       setBusyAction("");
     }
@@ -94,7 +99,7 @@ function ElectionDetailsPage() {
       setTallyResults(await tallyServiceApi.tallyElection(election.electionId));
       setActionMessage("El conteo finalizó correctamente.");
     } catch (tallyError) {
-      setActionError(getApiErrorMessage(tallyError, "No se pudo contabilizar la elección."));
+      setActionError(getApiErrorMessage(tallyError, "tally"));
     } finally {
       setBusyAction("");
     }
@@ -139,16 +144,45 @@ function ElectionDetailsPage() {
           </Stack>
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mt: 3 }}>
-            <Button component={RouterLink} to={`/vote/${election.electionId}/bulletin`} variant="outlined" startIcon={<ManageSearchOutlined />}>
+            <Button
+              component={RouterLink}
+              to={`/vote/${election.electionId}/bulletin`}
+              variant="outlined"
+              startIcon={<ManageSearchOutlined />}
+            >
               Consultar tablón público
             </Button>
+
+            {/* Botón de resultados: visible para todos si la elección está FINISHED */}
+            {election.status === "FINISHED" && (
+              <Button
+                component={RouterLink}
+                to={`/vote/${election.electionId}/results`}
+                variant="outlined"
+                startIcon={<BarChartOutlined />}
+                color="secondary"
+              >
+                Ver resultados finales
+              </Button>
+            )}
+
             {isVoter && election.status === "ACTIVE" && (
-              <Button component={RouterLink} to={`/vote/${election.electionId}/ballot`} variant="contained" startIcon={<HowToVoteOutlined />}>
+              <Button
+                component={RouterLink}
+                to={`/vote/${election.electionId}/ballot`}
+                variant="contained"
+                startIcon={<HowToVoteOutlined />}
+              >
                 Emitir voto
               </Button>
             )}
             {isAdmin && (
-              <Button component={RouterLink} to={`/admin/elections/${election.electionId}`} variant="outlined" startIcon={<SettingsOutlined />}>
+              <Button
+                component={RouterLink}
+                to={`/admin/elections/${election.electionId}`}
+                variant="outlined"
+                startIcon={<SettingsOutlined />}
+              >
                 Configurar elección
               </Button>
             )}
