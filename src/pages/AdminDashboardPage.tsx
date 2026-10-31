@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Add, ArrowForward, HowToVoteOutlined } from "@mui/icons-material";
 import {
   Alert,
@@ -32,7 +32,8 @@ function AdminDashboardPage() {
   const [formError, setFormError] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const createElection = async () => {
+  const createElection = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setFormError("");
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -110,9 +111,13 @@ function AdminDashboardPage() {
                 </Box>
                 <Stack direction="row" spacing={1}>
                   <Button component={RouterLink} to={`/vote/${election.electionId}`} variant="outlined">Ver detalle</Button>
-                  <Button component={RouterLink} to={`/admin/elections/${election.electionId}`} endIcon={<ArrowForward />}>
-                    Configurar
-                  </Button>
+                  {election.status === "DRAFT" ? (
+                    <Button component={RouterLink} to={`/admin/elections/${election.electionId}`} endIcon={<ArrowForward />}>
+                      Configurar
+                    </Button>
+                  ) : (
+                    <Button disabled>Configuración cerrada</Button>
+                  )}
                 </Stack>
               </Stack>
             </Paper>

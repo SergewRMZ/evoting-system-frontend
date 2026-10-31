@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowBack,
   CampaignOutlined,
@@ -41,6 +41,7 @@ function ElectionConfigurationPage() {
   const [election, setElection] = useState<ElectionDetails | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidateLoading, setCandidateLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [positionsError, setPositionsError] = useState("");
   const [candidateError, setCandidateError] = useState("");
@@ -107,7 +108,12 @@ function ElectionConfigurationPage() {
     };
   }, [electionId]);
 
-  const associatePosition = async () => {
+  const associatePosition = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (election?.status !== "DRAFT") {
+      setError("Solo se puede configurar una elección en estado borrador.");
+      return;
+    }
     if (!electionId || !selectedPositionId) return;
     if (election?.positions.some((position) => position.positionId === selectedPositionId) ||
       associatedPositionIds.includes(selectedPositionId)) {
@@ -135,7 +141,12 @@ function ElectionConfigurationPage() {
     }
   };
 
-  const createAndAssociatePosition = async () => {
+  const createAndAssociatePosition = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (election?.status !== "DRAFT") {
+      setError("Solo se puede configurar una elección en estado borrador.");
+      return;
+    }
     if (!electionId) return;
     if (!newPositionName.trim()) {
       setError("Escribe el nombre del cargo electoral.");
@@ -159,7 +170,12 @@ function ElectionConfigurationPage() {
     }
   };
 
-  const createCandidate = async () => {
+  const createCandidate = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (election?.status !== "DRAFT") {
+      setError("Solo se puede configurar una elección en estado borrador.");
+      return;
+    }
     if (!newCandidate.name.trim() || !newCandidate.lastName.trim() || !newCandidate.description.trim()) {
       setError("Completa el nombre, apellido y descripción del candidato.");
       return;
@@ -184,6 +200,10 @@ function ElectionConfigurationPage() {
   };
 
   const addCandidacies = async (electionPositionId: string) => {
+    if (election?.status !== "DRAFT") {
+      setError("Solo se puede configurar una elección en estado borrador.");
+      return;
+    }
     const candidateIds = selectedCandidates[electionPositionId] ?? [];
     const alreadyAssociated = new Set([
       ...(election?.positions.find((position) => position.electionPositionId === electionPositionId)
@@ -220,6 +240,18 @@ function ElectionConfigurationPage() {
     }
   };
 
+  const reloadCandidates = async () => {
+    setCandidateLoading(true);
+    setCandidateError("");
+    try {
+      setCandidates(await electionServiceApi.getCandidates());
+    } catch (loadError) {
+      setCandidateError(getApiErrorMessage(loadError, "election", "No se pudieron consultar los candidatos existentes."));
+    } finally {
+      setCandidateLoading(false);
+    }
+  };
+
   const publishElection = async () => {
     if (!electionId) return;
     setBusy(true);
@@ -239,6 +271,7 @@ function ElectionConfigurationPage() {
 
   const positionsConfigured = election.positions.length > 0 &&
     election.positions.every((position) => position.candidacies.length > 0);
+  const canConfigure = election.status === "DRAFT";
   const availablePositions = positions.filter((position) =>
     !election.positions.some((associated) => associated.positionId === position.id) &&
     !associatedPositionIds.includes(position.id)
@@ -259,6 +292,11 @@ function ElectionConfigurationPage() {
           Asocia cargos electorales y registra las candidaturas antes de publicar la elección.
         </Typography>
 
+        {!canConfigure && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Esta elección está en estado {election.status}. La configuración solo está disponible mientras permanece en borrador.
+          </Alert>
+        )}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
 
@@ -279,6 +317,7 @@ function ElectionConfigurationPage() {
                       labelId="position-select-label"
                       value={selectedPositionId}
                       label="Cargo existente"
+                      disabled={!canConfigure || busy}
                       onChange={(event) => setSelectedPositionId(event.target.value)}
                     >
                       {availablePositions.map((position) => (
@@ -286,7 +325,7 @@ function ElectionConfigurationPage() {
                       ))}
                     </Select>
                   </FormControl>
-                  <Button type="submit" variant="outlined" disabled={!selectedPositionId || busy} sx={{ minWidth: 180 }}>
+                  <Button type="submit" variant="outlined" disabled={!canConfigure || !selectedPositionId || busy} sx={{ minWidth: 180 }}>
                     Asociar cargo
                   </Button>
                 </Stack>
@@ -301,10 +340,11 @@ function ElectionConfigurationPage() {
                   label="Crear cargo nuevo"
                   value={newPositionName}
                   onChange={(event) => setNewPositionName(event.target.value)}
+                  disabled={!canConfigure || busy}
                   required
                   fullWidth
                 />
-                <Button type="submit" variant="outlined" disabled={busy} sx={{ minWidth: 180 }}>
+                <Button type="submit" variant="outlined" disabled={!canConfigure || busy} sx={{ minWidth: 180 }}>
                   Crear y asociar
                 </Button>
               </Stack>
@@ -328,14 +368,13 @@ function ElectionConfigurationPage() {
           <Box component="form" onSubmit={createCandidate}>
             <Stack spacing={2}>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <TextField label="Nombre" value={newCandidate.name} onChange={(event) => setNewCandidate({ ...newCandidate, name: event.target.value })} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
-                <TextField label="Apellido" value={newCandidate.lastName} onChange={(event) => setNewCandidate({ ...newCandidate, lastName: event.target.value })} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
+                <TextField label="Nombre" value={newCandidate.name} onChange={(event) => setNewCandidate({ ...newCandidate, name: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
+                <TextField label="Apellido" value={newCandidate.lastName} onChange={(event) => setNewCandidate({ ...newCandidate, lastName: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
               </Stack>
-              <TextField label="Descripción" value={newCandidate.description} onChange={(event) => setNewCandidate({ ...newCandidate, description: event.target.value })} required slotProps={{ htmlInput: { maxLength: 100 } }} fullWidth />
-              <Box><Button type="submit" variant="outlined" startIcon={<PersonAddAlt1Outlined />} disabled={busy}>Registrar candidato</Button></Box>
+              <TextField label="Descripción" value={newCandidate.description} onChange={(event) => setNewCandidate({ ...newCandidate, description: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 100 } }} fullWidth />
+              <Box><Button type="submit" variant="outlined" startIcon={<PersonAddAlt1Outlined />} disabled={!canConfigure || busy}>Registrar candidato</Button></Box>
             </Stack>
           </Box>
-          {candidateError && <Alert severity="warning" sx={{ mt: 2 }}>{candidateError}</Alert>}
           </AccordionDetails>
         </Accordion>
 
@@ -343,6 +382,19 @@ function ElectionConfigurationPage() {
         <Typography color="text.secondary" sx={{ mb: 2 }}>
           Selecciona candidatos del catálogo existente para cada cargo. Los que ya fueron asociados no volverán a aparecer.
         </Typography>
+        {candidateError && (
+          <Alert
+            severity="warning"
+            sx={{ mb: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={() => void reloadCandidates()} disabled={candidateLoading}>
+                {candidateLoading ? "Consultando..." : "Reintentar"}
+              </Button>
+            }
+          >
+            No se pudo cargar el catálogo de candidatos: {candidateError}
+          </Alert>
+        )}
         {election.positions.length === 0 && <Alert severity="info" sx={{ mb: 2 }}>Agrega al menos un cargo para asignar candidaturas.</Alert>}
         <Stack spacing={2}>
           {election.positions.map((position) => (
@@ -353,7 +405,11 @@ function ElectionConfigurationPage() {
               </Typography>
               {candidates.length === 0 ? (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  Registra o consulta candidatos para poder asociarlos.
+                  {candidateLoading
+                    ? "Consultando candidatos..."
+                    : candidateError
+                      ? "La consulta del catálogo falló; usa la opción de reintento para volver a cargarlo."
+                      : "No hay candidatos registrados para asociar a este cargo."}
                 </Alert>
               ) : (
                 <>
@@ -382,6 +438,7 @@ function ElectionConfigurationPage() {
                           ...current,
                           [position.electionPositionId]: selected.map((candidate) => candidate.id),
                         }))}
+                        disabled={!canConfigure || busy}
                         renderInput={(params) => (
                           <TextField
                             {...params}
@@ -396,7 +453,7 @@ function ElectionConfigurationPage() {
                   <Button
                     variant="outlined"
                     startIcon={<PersonAddAlt1Outlined />}
-                    disabled={busy || !(selectedCandidates[position.electionPositionId]?.length)}
+                    disabled={!canConfigure || busy || !(selectedCandidates[position.electionPositionId]?.length)}
                     onClick={() => void addCandidacies(position.electionPositionId)}
                   >
                     Agregar candidaturas
