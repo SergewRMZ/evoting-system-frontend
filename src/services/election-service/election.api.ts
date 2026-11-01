@@ -9,6 +9,7 @@ import type {
     Election,
     ElectionDetails,
     Position,
+    UpdateElectionRequest,
 } from "./election.types";
 
 const electionServiceApi = {
@@ -24,6 +25,11 @@ const electionServiceApi = {
 
     createElection: async (election: CreateElectionRequest): Promise<CreateElectionResponse> => {
         const response = await apiClient.post("/api/election-service/elections", election);
+        return response.data;
+    },
+
+    updateElection: async (electionId: string, election: UpdateElectionRequest): Promise<Election> => {
+        const response = await apiClient.put(`/api/election-service/elections/${encodeURIComponent(electionId)}`, election);
         return response.data;
     },
 

@@ -130,3 +130,22 @@ export function getApiErrorMessage(
   return mapApiError(error, context, fallback).message;
 }
 
+
+
+/**
+ * Devuelve el código HTTP de una respuesta de error de Axios, o undefined
+ * cuando el error no proviene de una respuesta del servidor.
+ */
+export function getHttpStatus(error: unknown): number | undefined {
+  const axiosError = error as { isAxiosError?: boolean; response?: { status?: number } };
+  return axiosError?.isAxiosError ? axiosError.response?.status : undefined;
+}
+
+/**
+ * Título (`title`) del ProblemDetail que devuelve el backend, si existe.
+ */
+export function getProblemTitle(error: unknown): string | undefined {
+  const axiosError = error as { isAxiosError?: boolean; response?: { data?: { title?: unknown } } };
+  const title = axiosError?.isAxiosError ? axiosError.response?.data?.title : undefined;
+  return typeof title === "string" ? title : undefined;
+}

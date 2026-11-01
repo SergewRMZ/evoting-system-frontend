@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowBack,
   CampaignOutlined,
+  EditOutlined,
   PersonAddAlt1Outlined,
 } from "@mui/icons-material";
 import {
@@ -32,10 +33,15 @@ import electionServiceApi from "../services/election-service/election.api";
 import type {
   Candidate,
   CreateCandidateRequest,
+  CreateElectionRequest,
   ElectionDetails,
   Position,
 } from "../services/election-service/election.types";
-import { getApiErrorMessage } from "../errors/apiErrorMap";
+import { getApiErrorMessage, getHttpStatus } from "../errors/apiErrorMap";
+import ElectionFormDialog from "../components/election/ElectionFormDialog";
+import ElectionStatusChip from "../components/election/ElectionStatusChip";
+import { electionToFormValues } from "../utils/electionForm";
+import { isElectionReadyToPublish } from "../utils/electionStatus";
 
 function ElectionConfigurationPage() {
   const { electionId } = useParams<{ electionId: string }>();
@@ -51,6 +57,7 @@ function ElectionConfigurationPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [associationDialogPositionId, setAssociationDialogPositionId] = useState("");
   const [selectedPositionId, setSelectedPositionId] = useState("");
   const [newPositionName, setNewPositionName] = useState("");
@@ -257,6 +264,28 @@ function ElectionConfigurationPage() {
     }
   };
 
+  const updateElection = async (request: CreateElectionRequest) => {
+    if (!electionId) return;
+    try {
+      await electionServiceApi.updateElection(electionId, request);
+    } catch (updateError) {
+      const status = getHttpStatus(updateError);
+      const message = status === 409
+        ? "La elección ya no está en borrador, por lo que no puede modificarse. Recarga la página para ver su estado actual."
+        : status === 400
+          ? "Los datos no son válidos. Revisa los campos e inténtalo de nuevo."
+          : getApiErrorMessage(updateError, "election", "No se pudieron guardar los cambios.");
+      throw new Error(message, { cause: updateError });
+    }
+    setEditDialogOpen(false);
+    setMessage("Los datos de la elección se actualizaron correctamente.");
+    try {
+      await refreshElection();
+    } catch (refreshError) {
+      setError(`Los cambios se guardaron, pero no se pudo actualizar el detalle: ${getApiErrorMessage(refreshError, "generic", "error desconocido")}`);
+    }
+  };
+
   const publishElection = async () => {
     if (!electionId) return;
     setBusy(true);
@@ -274,8 +303,7 @@ function ElectionConfigurationPage() {
   if (loading) return <LoadingPage message="Cargando opciones de configuración..." />;
   if (!election) return <Container sx={{ py: 6 }}><Alert severity="error">{error || (!electionId ? "No se proporcionó el identificador de la elección." : "No se encontró la elección.")}</Alert></Container>;
 
-  const positionsConfigured = election.positions.length > 0 &&
-    election.positions.every((position) => position.candidacies.length > 0);
+  const positionsConfigured = isElectionReadyToPublish(election);
   const canConfigure = election.status === "DRAFT";
   const availablePositions = positions.filter((position) =>
     !election.positions.some((associated) => associated.positionId === position.id) &&
@@ -292,7 +320,10 @@ function ElectionConfigurationPage() {
         <Button component={RouterLink} to="/admin" startIcon={<ArrowBack />} sx={{ mb: 3 }}>
           Volver a administración
         </Button>
-        <Typography variant="overline" color="secondary.main">CONFIGURACIÓN · {election.status}</Typography>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+          <Typography variant="overline" color="secondary.main">CONFIGURACIÓN</Typography>
+          <ElectionStatusChip status={election.status} size="small" />
+        </Stack>
         <Typography variant="h2" sx={{ fontSize: { xs: "2.2rem", md: "3.2rem" }, mt: 1 }}>
           {election.name}
         </Typography>
@@ -307,6 +338,21 @@ function ElectionConfigurationPage() {
         )}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
+
+        <Paper variant="outlined" sx={{ borderColor: "divider", mb: 3, p: { xs: 2.5, md: 3 } }}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { sm: "flex-start" } }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>Datos generales</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{election.description}</Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                {new Date(election.startDate).toLocaleString("es-MX")} — {new Date(election.endDate).toLocaleString("es-MX")}
+              </Typography>
+            </Box>
+            <Button variant="outlined" startIcon={<EditOutlined />} disabled={!canConfigure || busy} onClick={() => setEditDialogOpen(true)}>
+              Editar datos
+            </Button>
+          </Stack>
+        </Paper>
 
         <Paper variant="outlined" sx={{ borderColor: "divider", mb: 3, overflow: "hidden" }}>
           <Tabs
@@ -473,6 +519,14 @@ function ElectionConfigurationPage() {
             </Box>
           )}
         </Paper>
+
+        <ElectionFormDialog
+          open={editDialogOpen}
+          mode="edit"
+          initialValues={electionToFormValues(election)}
+          onClose={() => setEditDialogOpen(false)}
+          onSubmit={updateElection}
+        />
 
         <Dialog
           open={Boolean(associationDialogPosition)}

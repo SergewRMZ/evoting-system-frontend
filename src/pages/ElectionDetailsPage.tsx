@@ -4,7 +4,6 @@ import {
   BarChartOutlined,
   HowToVoteOutlined,
   ManageSearchOutlined,
-  SettingsOutlined,
 } from "@mui/icons-material";
 import {
   Alert,
@@ -26,22 +25,11 @@ import Navbar from "../components/Navbar";
 import LoadingPage from "../components/LoadingPage";
 import useElectionDetails from "../hooks/election-service/useElectionDetails";
 import { useKeycloak } from "../auth/useKeycloak";
-import electionServiceApi from "../services/election-service/election.api";
-import authorizationServiceApi from "../services/authorization-service/authorization.api";
+import ElectionStatusChip from "../components/election/ElectionStatusChip";
+import ElectionManagementPanel from "../components/election/ElectionManagementPanel";
 import tallyServiceApi from "../services/tally-service/tally-service.api";
 import type { ElectionTallyResult } from "../services/tally-service/tally-service.types";
 import { getApiErrorMessage } from "../errors/apiErrorMap";
-import type { ElectionStatus } from "../services/election-service/election.types";
-
-const labels: Record<ElectionStatus, string> = {
-  DRAFT: "Borrador",
-  CREATED: "Creada",
-  PUBLISHED: "Publicada",
-  VERIFIED: "Verificada",
-  ACTIVE: "Activa",
-  CLOSED: "Cerrada",
-  FINISHED: "Finalizada",
-};
 
 const formatDate = (date: string) =>
   new Intl.DateTimeFormat("es-MX", {
@@ -58,7 +46,7 @@ function ElectionDetailsPage() {
   const isVoter = roles.includes("ROLE_VOTER");
   const [actionError, setActionError] = useState("");
   const [actionMessage, setActionMessage] = useState("");
-  const [busyAction, setBusyAction] = useState("");
+  const [countingVotes, setCountingVotes] = useState(false);
   const [tallyResults, setTallyResults] = useState<ElectionTallyResult[] | null>(null);
 
   if (loading) return <LoadingPage message="Cargando detalle de la elección..." />;
@@ -74,25 +62,8 @@ function ElectionDetailsPage() {
     );
   }
 
-  const runAction = async (label: string, action: () => Promise<unknown>) => {
-    setBusyAction(label);
-    setActionError("");
-    setActionMessage("");
-    try {
-      const result = await action();
-      if (result && typeof result === "object" && "status" in result) {
-        await reload();
-      }
-      setActionMessage("La operación se completó correctamente.");
-    } catch (actionError) {
-      setActionError(getApiErrorMessage(actionError, "election"));
-    } finally {
-      setBusyAction("");
-    }
-  };
-
   const countVotes = async () => {
-    setBusyAction("tally");
+    setCountingVotes(true);
     setActionError("");
     setActionMessage("");
     try {
@@ -101,7 +72,7 @@ function ElectionDetailsPage() {
     } catch (tallyError) {
       setActionError(getApiErrorMessage(tallyError, "tally"));
     } finally {
-      setBusyAction("");
+      setCountingVotes(false);
     }
   };
 
@@ -123,7 +94,7 @@ function ElectionDetailsPage() {
                 {election.name}
               </Typography>
             </Box>
-            <Chip label={labels[election.status]} color={election.status === "ACTIVE" ? "success" : "default"} />
+            <ElectionStatusChip status={election.status} />
           </Stack>
           <Typography color="text.secondary" sx={{ mt: 2, lineHeight: 1.8 }}>
             {election.description}
@@ -176,61 +147,20 @@ function ElectionDetailsPage() {
                 Emitir voto
               </Button>
             )}
-            {isAdmin && (
-              <Button
-                component={RouterLink}
-                to={`/admin/elections/${election.electionId}`}
-                variant="outlined"
-                startIcon={<SettingsOutlined />}
-              >
-                Configurar elección
-              </Button>
-            )}
           </Stack>
 
           {(isAuthority || isAdmin) && (
-            <Box sx={{ mt: 4, pt: 3, borderTop: "1px solid", borderColor: "divider" }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>Acciones de gestión</Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-                {isAuthority && election.status === "PUBLISHED" && (
-                  <Button variant="contained" disabled={Boolean(busyAction)} onClick={() => runAction("validate", () => electionServiceApi.validateElection(election.electionId))}>
-                    Validar elección
-                  </Button>
-                )}
-                {isAuthority && election.status === "VERIFIED" && (
-                  <Button variant="contained" disabled={Boolean(busyAction)} onClick={() => runAction("activate", () => electionServiceApi.activateElection(election.electionId))}>
-                    Activar elección
-                  </Button>
-                )}
-                {isAuthority && election.status === "VERIFIED" && (
-                  <>
-                    <Button variant="outlined" disabled={Boolean(busyAction)} onClick={() => runAction("authorization-keys", () => authorizationServiceApi.createKeys(election.electionId))}>
-                      Crear claves de autorización
-                    </Button>
-                    <Button variant="outlined" disabled={Boolean(busyAction)} onClick={() => runAction("encryption-keys", () => tallyServiceApi.createKeys(election.electionId))}>
-                      Crear claves de cifrado
-                    </Button>
-                  </>
-                )}
-                {isAuthority && election.status === "ACTIVE" && (
-                  <>
-                    <Button variant="outlined" disabled={Boolean(busyAction)} onClick={() => runAction("activate-authorization-keys", () => authorizationServiceApi.activateKeys(election.electionId))}>
-                      Activar claves de autorización
-                    </Button>
-                    <Button variant="outlined" disabled={Boolean(busyAction)} onClick={() => runAction("activate-encryption-keys", () => tallyServiceApi.activateKeys(election.electionId))}>
-                      Activar claves de cifrado
-                    </Button>
-                  </>
-                )}
-                {isAuthority && election.status === "CLOSED" && (
-                  <Button variant="contained" disabled={Boolean(busyAction)} onClick={() => void countVotes()}>
-                    Contabilizar votos
-                  </Button>
-                )}
-              </Stack>
+            <>
+              <ElectionManagementPanel
+                election={election}
+                roles={{ isAdmin, isAuthority }}
+                onChanged={() => void reload().catch(() => undefined)}
+                onCountVotes={() => void countVotes()}
+                countingVotes={countingVotes}
+              />
               {actionError && <Alert severity="error" sx={{ mt: 2 }}>{actionError}</Alert>}
               {actionMessage && <Alert severity="success" sx={{ mt: 2 }}>{actionMessage}</Alert>}
-            </Box>
+            </>
           )}
         </Paper>
 

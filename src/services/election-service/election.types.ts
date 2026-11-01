@@ -41,6 +41,8 @@ export type ElectionDetails = Election & {
 
 export type CreateElectionRequest = Pick<Election, "name" | "description" | "startDate" | "endDate">;
 
+export type UpdateElectionRequest = CreateElectionRequest;
+
 export type Position = {
   id: string;
   positionName: string;

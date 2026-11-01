@@ -16,8 +16,8 @@ import {
   Alert,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import ElectionStatusChip from "../components/election/ElectionStatusChip";
 import Navbar from "../components/Navbar";
-import type { ElectionStatus } from "../services/election-service/election.types";
 import useElections from "../hooks/election-service/useElections";
 import { useKeycloak } from "../auth/useKeycloak";
 import LoadingPage from "../components/LoadingPage";
@@ -26,16 +26,6 @@ const dateFormatter = new Intl.DateTimeFormat("es-MX", {
   dateStyle: "medium",
   timeZone: "UTC",
 });
-
-const statusLabels: Record<ElectionStatus, string> = {
-  DRAFT: "Borrador",
-  CREATED: "Programada",
-  PUBLISHED: "Publicada",
-  VERIFIED: "Verificada",
-  ACTIVE: "Activa",
-  CLOSED: "Cerrada",
-  FINISHED: "Finalizada",
-};
 
 function ElectionsPage() {
   const { elections: allElections, loading, error } = useElections();
@@ -190,15 +180,7 @@ function ElectionsPage() {
                     >
                       <HowToVoteOutlined />
                     </Box>
-                    <Chip
-                      size="small"
-                      icon={<RadioButtonChecked sx={{ fontSize: "12px !important" }} />}
-                      label={statusLabels[election.status]}
-                      sx={{
-                        color: "secondary.main",
-                        bgcolor: "rgba(114,230,177,.1)",
-                      }}
-                    />
+                    <ElectionStatusChip status={election.status} size="small" />
                   </Stack>
                   <Typography variant="h5" sx={{ mt: 3, fontWeight: 700 }}>
                     {election.name}
