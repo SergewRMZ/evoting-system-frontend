@@ -1,3 +1,4 @@
+import { alpha } from "@mui/material/styles";
 import { CheckCircle } from "@mui/icons-material";
 import {
   Avatar,
@@ -35,12 +36,12 @@ function CandidateCard({
     <Card
       sx={{
         height: "100%",
-        border: "2px solid",
-        borderColor: selected ? "primary.main" : "primary.contrastText",
-        bgcolor: selected ? "background.paper" : "background.default",
+        border: "1px solid",
+        borderColor: selected ? "primary.main" : "divider",
+        bgcolor: "background.paper",
         borderRadius: 3,
-        boxShadow: selected ? "0 0 0 4px rgba(21,94,239,.1)" : "none",
-        transition: "all .2s ease",
+        boxShadow: (theme) => (selected ? `0 0 0 3px ${alpha(theme.palette.primary.main, 0.16)}` : "none"),
+        transition: "border-color .15s ease, box-shadow .15s ease",
       }}
     >
       <CardActionArea

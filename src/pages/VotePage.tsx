@@ -164,7 +164,7 @@ function VotePage() {
       }
       setSubmissionFeedback({
         severity: "error",
-        message: err.message
+        message: err instanceof Error ? err.message : "No se pudo emitir el voto. Inténtalo de nuevo.",
       });
     } finally {
       setIsSubmitting(false);
@@ -203,14 +203,7 @@ function VotePage() {
         <Alert
           icon={<InfoOutlined />}
           severity="info"
-          sx={{
-            mb: 3,
-            border: "1px solid rgba(155,138,251,.22)",
-            bgcolor: "rgba(155,138,251,.07)",
-            fontSize: "1.2rem",
-            color: "text.primary",
-            "& .MuiAlert-icon": { color: "primary.main" },
-          }}
+          sx={{ mb: 3 }}
         >
           Tu identidad se usa para validar tu participación en el proceso.
           Selecciona el candidato de tu preferencia para cada posición electoral
@@ -253,7 +246,6 @@ function VotePage() {
             mt: 3,
             p: { xs: 2.5, md: 3 },
             borderColor: "divider",
-            bgcolor: "rgba(255,255,255,.02)",
           }}
         >
           <Stack

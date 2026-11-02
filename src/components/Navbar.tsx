@@ -1,160 +1,144 @@
-import {
-  DarkModeOutlined,
-  HowToVoteOutlined,
-  LightModeOutlined,
-  LogoutOutlined,
-  ManageAccountsOutlined,
-} from "@mui/icons-material";
-import { useContext } from "react";
+import { useState } from "react";
+import { LogoutOutlined, ManageAccountsOutlined } from "@mui/icons-material";
 import {
   AppBar,
+  Avatar,
   Box,
   Button,
+  ButtonBase,
   Container,
+  Divider,
+  ListItemIcon,
+  Menu,
+  MenuItem,
   Stack,
   Toolbar,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import { Link as RouterLink, useLocation } from "react-router-dom";
+import { alpha } from "@mui/material/styles";
+import { Link as RouterLink, matchPath, useLocation } from "react-router-dom";
 import { useKeycloak } from "../auth/useKeycloak";
-import { ColorModeContext } from "../theme/ColorModeContext";
+import { getHomePath } from "../auth/roles";
 import keycloak from "../auth/keycloakConfig";
+import Brand from "./layout/Brand";
+import ColorModeButton from "./layout/ColorModeButton";
+
+type NavItem = { label: string; to: string; /** Rutas que marcan el enlace como activo. */ match: string[] };
+
+function getNavItems(roles: string[]): NavItem[] {
+  if (roles.includes("ROLE_ADMIN")) {
+    return [
+      { label: "Elecciones", to: "/admin", match: ["/admin", "/admin/elections/*"] },
+      { label: "Votantes", to: "/admin/voters", match: ["/admin/voters"] },
+    ];
+  }
+  if (roles.includes("ROLE_AUTHORITY")) {
+    return [{ label: "Revisión electoral", to: "/authority", match: ["/authority"] }];
+  }
+  if (roles.includes("ROLE_VOTER")) {
+    return [{ label: "Elecciones", to: "/vote", match: ["/vote"] }];
+  }
+  return [];
+}
+
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "?";
 
 function Navbar() {
-  const { handleLogout, authenticated, roles } = useKeycloak();
-  const { mode, toggleColorMode } = useContext(ColorModeContext);
+  const { handleLogout, authenticated, roles, profile } = useKeycloak();
   const { pathname } = useLocation();
-  const isAdmin = roles.includes("ROLE_ADMIN");
-  const isAuthority = roles.includes("ROLE_AUTHORITY");
-  const electionPath = isAuthority ? "/authority" : "/vote";
-  const electionLabel = isAuthority ? "Revisión electoral" : "Elecciones";
-
-  /**
-   * Redirige al usuario a la Consola de Cuenta de Keycloak.
-   * Usa la función nativa del adaptador JS; no se construye ninguna vista propia.
-   */
-  const handleAccountManagement = () => {
-    void keycloak.accountManagement();
-  };
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const navItems = getNavItems(roles);
+  const isActive = (item: NavItem) => item.match.some((pattern) => matchPath(pattern, pathname));
 
   return (
-    <AppBar
-      position="static"
-      elevation={0}
-      sx={{
-        bgcolor: "background.paper",
-        borderBottom: "1px solid",
-        borderColor: "divider",
-      }}
-    >
+    <AppBar position="sticky">
       <Container maxWidth="lg">
-        <Toolbar disableGutters sx={{ justifyContent: "space-between" }}>
-          {/* ── Logotipo ── */}
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-            <HowToVoteOutlined sx={{ color: "secondary.main" }} />
-            <Typography
-              component={RouterLink}
-              to="/"
-              sx={{
-                color: "text.primary",
-                textDecoration: "none",
-                fontWeight: 700,
-                letterSpacing: "-.03em",
-              }}
-            >
-              Votación Anónima
-            </Typography>
-          </Stack>
+        <Toolbar disableGutters sx={{ gap: 3, minHeight: { xs: 60 } }}>
+          <Brand to={authenticated ? getHomePath(roles) : "/"} />
 
-          {/* ── Acciones ── */}
-          <Stack
-            direction="row"
-            spacing={{ xs: 0.5, sm: 1.5 }}
-            sx={{ alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}
-          >
-            {/* Alternar tema */}
-            <Button
-              color="inherit"
-              onClick={toggleColorMode}
-              aria-label={
-                mode === "dark"
-                  ? "Cambiar a modo claro"
-                  : "Cambiar a modo oscuro"
-              }
-              startIcon={
-                mode === "dark" ? (
-                  <LightModeOutlined />
-                ) : (
-                  <DarkModeOutlined />
-                )
-              }
-              sx={{ color: "text.secondary", minWidth: { xs: 40, sm: "auto" } }}
-            >
-              <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
-                {mode === "dark" ? "Modo claro" : "Modo oscuro"}
-              </Box>
-            </Button>
-
-            {authenticated && (
-              <>
-                <Button
-                  component={RouterLink}
-                  to={electionPath}
-                  color="inherit"
-                  aria-current={pathname.startsWith(electionPath) ? "page" : undefined}
-                  sx={{
-                    color: pathname.startsWith(electionPath) ? "primary.main" : "text.secondary",
-                    bgcolor: pathname.startsWith(electionPath) ? "action.selected" : undefined,
-                  }}
-                >
-                  {electionLabel}
-                </Button>
-
-                {isAdmin && (
+          {navItems.length > 0 && (
+            <Stack component="nav" direction="row" spacing={0.5} sx={{ display: { xs: "none", sm: "flex" } }} aria-label="Navegación principal">
+              {navItems.map((item) => {
+                const active = isActive(item);
+                return (
                   <Button
+                    key={item.to}
                     component={RouterLink}
-                    to="/admin"
-                    color="inherit"
-                    aria-current={pathname.startsWith("/admin") ? "page" : undefined}
-                    sx={{
-                      color: pathname.startsWith("/admin") ? "primary.main" : "text.secondary",
-                      bgcolor: pathname.startsWith("/admin") ? "action.selected" : undefined,
-                    }}
+                    to={item.to}
+                    size="small"
+                    aria-current={active ? "page" : undefined}
+                    sx={(theme) => ({
+                      color: active ? "text.primary" : "text.secondary",
+                      bgcolor: active ? alpha(theme.palette.text.primary, 0.06) : "transparent",
+                      "&:hover": { bgcolor: alpha(theme.palette.text.primary, 0.06) },
+                    })}
                   >
-                    Administración
+                    {item.label}
                   </Button>
-                )}
+                );
+              })}
+            </Stack>
+          )}
 
-                {/* ── Gestión de perfil en Keycloak ── */}
-                <Tooltip title="Gestionar mi perfil en Keycloak">
-                  <Button
-                    color="inherit"
-                    startIcon={<ManageAccountsOutlined />}
-                    onClick={handleAccountManagement}
-                    sx={{ color: "text.secondary" }}
-                    aria-label="Gestionar perfil"
-                  >
-                    <Box
-                      component="span"
-                      sx={{ display: { xs: "none", sm: "inline" } }}
-                    >
-                      Mi perfil
-                    </Box>
-                  </Button>
-                </Tooltip>
+          <Box sx={{ flex: 1 }} />
 
-                <Button
-                  color="inherit"
-                  startIcon={<LogoutOutlined />}
-                  onClick={handleLogout}
-                  sx={{ color: "text.secondary" }}
-                >
-                  Cerrar sesión
-                </Button>
-              </>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+            <ColorModeButton />
+            {authenticated && (
+              <ButtonBase
+                onClick={(event) => setMenuAnchor(event.currentTarget)}
+                aria-label="Abrir menú de la cuenta"
+                aria-haspopup="menu"
+                sx={{ borderRadius: "50%" }}
+              >
+                <Avatar sx={(theme) => ({ width: 32, height: 32, fontSize: "0.8125rem", fontWeight: 600, bgcolor: alpha(theme.palette.primary.main, 0.14), color: "primary.main" })}>
+                  {initialsOf(profile?.name ?? "")}
+                </Avatar>
+              </ButtonBase>
             )}
           </Stack>
+
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={() => setMenuAnchor(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{ paper: { variant: "outlined", sx: { mt: 1, minWidth: 240 } } }}
+          >
+            <Box sx={{ px: 2, py: 1.25 }}>
+              <Typography variant="subtitle2" noWrap>{profile?.name}</Typography>
+              <Typography variant="body2" color="text.secondary" noWrap>{profile?.email || profile?.username}</Typography>
+            </Box>
+            {navItems.length > 0 && <Divider sx={{ display: { sm: "none" } }} />}
+            {navItems.map((item) => (
+              <MenuItem
+                key={item.to}
+                component={RouterLink}
+                to={item.to}
+                selected={isActive(item)}
+                onClick={() => setMenuAnchor(null)}
+                sx={{ display: { sm: "none" } }}
+              >
+                {item.label}
+              </MenuItem>
+            ))}
+            <Divider />
+            <MenuItem onClick={() => { setMenuAnchor(null); void keycloak.accountManagement(); }}>
+              <ListItemIcon><ManageAccountsOutlined fontSize="small" /></ListItemIcon>
+              Mi perfil
+            </MenuItem>
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon><LogoutOutlined fontSize="small" /></ListItemIcon>
+              Cerrar sesión
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </Container>
     </AppBar>

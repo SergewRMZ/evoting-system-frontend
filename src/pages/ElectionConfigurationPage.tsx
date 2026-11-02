@@ -316,15 +316,15 @@ function ElectionConfigurationPage() {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Navbar />
-      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 7 } }}>
-        <Button component={RouterLink} to="/admin" startIcon={<ArrowBack />} sx={{ mb: 3 }}>
+      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+        <Button component={RouterLink} to="/admin" size="small" startIcon={<ArrowBack fontSize="small" />} sx={{ mb: 2, ml: -1, color: "text.secondary" }}>
           Volver a administración
         </Button>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
           <Typography variant="overline" color="secondary.main">CONFIGURACIÓN</Typography>
           <ElectionStatusChip status={election.status} size="small" />
         </Stack>
-        <Typography variant="h2" sx={{ fontSize: { xs: "2.2rem", md: "3.2rem" }, mt: 1 }}>
+        <Typography variant="h4" component="h1" sx={{ fontSize: { xs: "1.625rem", md: "2rem" }, mt: 0.5 }}>
           {election.name}
         </Typography>
         <Typography color="text.secondary" sx={{ mt: 1, mb: 4 }}>

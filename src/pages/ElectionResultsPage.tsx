@@ -93,12 +93,13 @@ function ElectionResultsPage() {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Navbar />
-      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 7 } }}>
+      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
         <Button
           component={RouterLink}
           to={`/vote/${election.electionId}`}
-          startIcon={<ArrowBack />}
-          sx={{ mb: 3, color: "text.secondary" }}
+          size="small"
+          startIcon={<ArrowBack fontSize="small" />}
+          sx={{ mb: 2, ml: -1, color: "text.secondary" }}
         >
           Volver al detalle
         </Button>

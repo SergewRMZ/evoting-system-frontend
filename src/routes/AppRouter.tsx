@@ -9,7 +9,17 @@ import BulletinBoardPage from "../pages/BulletinBoardPage.tsx";
 import AdminDashboardPage from "../pages/AdminDashboardPage.tsx";
 import ElectionConfigurationPage from "../pages/ElectionConfigurationPage.tsx";
 import ElectionResultsPage from "../pages/ElectionResultsPage.tsx";
+import AdminVotersPage from "../pages/AdminVotersPage.tsx";
+import PendingAccountPage from "../pages/PendingAccountPage.tsx";
 import { ProtectedRoute } from "../components/ProtectedRoute.tsx";
+import { useKeycloak } from "../auth/useKeycloak.ts";
+import { getHomePath } from "../auth/roles.ts";
+
+/** Destino tras iniciar sesión o registrarse: la página que corresponde al rol. */
+function StartRedirect() {
+  const { authenticated, roles } = useKeycloak();
+  return <Navigate to={authenticated ? getHomePath(roles) : "/login"} replace />;
+}
 
 function AppRouter() {
   return (
@@ -17,6 +27,12 @@ function AppRouter() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/start" element={<StartRedirect />} />
+
+        {/* Cuenta autenticada pero aún no aprobada */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/pending" element={<PendingAccountPage />} />
+        </Route>
 
         {/* Rutas accesibles por cualquier rol autenticado */}
         <Route
@@ -46,6 +62,7 @@ function AppRouter() {
         {/* Rutas de administrador */}
         <Route element={<ProtectedRoute allowedRoles={["ROLE_ADMIN"]} />}>
           <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/voters" element={<AdminVotersPage />} />
           <Route path="/admin/elections/:electionId" element={<ElectionConfigurationPage />} />
         </Route>
 

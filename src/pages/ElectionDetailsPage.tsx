@@ -79,8 +79,8 @@ function ElectionDetailsPage() {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Navbar />
-      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 7 } }}>
-        <Button component={RouterLink} to={isAuthority ? "/authority" : "/vote"} startIcon={<ArrowBack />} sx={{ mb: 3 }}>
+      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+        <Button component={RouterLink} to={isAuthority ? "/authority" : "/vote"} size="small" startIcon={<ArrowBack fontSize="small" />} sx={{ mb: 2, ml: -1, color: "text.secondary" }}>
           Volver a elecciones
         </Button>
 
@@ -90,7 +90,7 @@ function ElectionDetailsPage() {
               <Typography variant="overline" color="secondary.main">
                 INFORMACIÓN DE LA ELECCIÓN
               </Typography>
-              <Typography variant="h2" sx={{ fontSize: { xs: "2rem", md: "3rem" }, mt: 1 }}>
+              <Typography variant="h4" component="h1" sx={{ fontSize: { xs: "1.625rem", md: "2rem" }, mt: 0.5 }}>
                 {election.name}
               </Typography>
             </Box>

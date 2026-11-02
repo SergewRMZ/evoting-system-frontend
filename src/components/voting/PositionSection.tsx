@@ -20,13 +20,8 @@ function PositionSection({
 }: PositionSectionProps) {
   return (
     <Paper
-      sx={{
-        p: { xs: 2, md: 4 },
-        border: "1px solid",
-        borderColor: "divider",
-        bgcolor: "background.paper",
-        boxShadow: "0 12px 32px rgba(0,0,0,.12)",
-      }}
+      variant="outlined"
+      sx={{ p: { xs: 2, md: 3 } }}
     >
       <Stack
         direction={{ xs: "column", sm: "row" }}

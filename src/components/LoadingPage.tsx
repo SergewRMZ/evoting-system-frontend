@@ -13,11 +13,12 @@ function LoadingPage({ message = "Cargando información..." }: LoadingPageProps)
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 2
+            gap: 2,
+            bgcolor: "background.default",
           }}
         >
-          <CircularProgress color="primary" aria-label="Cargando" />
-          <Typography variant="h5" role="status" aria-live="polite">
+          <CircularProgress size={28} thickness={4} aria-label="Cargando" />
+          <Typography color="text.secondary" role="status" aria-live="polite">
             {message}
           </Typography>
         </Box>

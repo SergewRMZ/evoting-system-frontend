@@ -127,12 +127,12 @@ function BulletinBoardPage() {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Navbar />
-      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 7 } }}>
-        <Button component={RouterLink} to={`/vote/${electionId ?? ""}`} startIcon={<ArrowBack />} sx={{ mb: 3 }}>
+      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+        <Button component={RouterLink} to={`/vote/${electionId ?? ""}`} size="small" startIcon={<ArrowBack fontSize="small" />} sx={{ mb: 2, ml: -1, color: "text.secondary" }}>
           Volver al detalle
         </Button>
         <Typography variant="overline" color="secondary.main">REGISTRO PÚBLICO</Typography>
-        <Typography variant="h2" sx={{ fontSize: { xs: "2.2rem", md: "3.2rem" }, mt: 1 }}>
+        <Typography variant="h4" component="h1" sx={{ fontSize: { xs: "1.625rem", md: "2rem" }, mt: 0.5 }}>
           Tablón de anuncios
         </Typography>
         <Typography color="text.secondary" sx={{ mt: 1, mb: 3 }}>
