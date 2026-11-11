@@ -4,6 +4,7 @@ import authorizationServiceApi from "../authorization-service/authorization.api"
 import tallyServiceApi from "../tally-service/tally-service.api";
 import {
   buildActivationSteps,
+  buildTallySteps,
   buildValidationSteps,
   executeSteps,
   toInitialSteps,
@@ -17,7 +18,7 @@ vi.mock("../authorization-service/authorization.api", () => ({
   default: { createKeys: vi.fn(), activateKeys: vi.fn(), getPublicKey: vi.fn() },
 }));
 vi.mock("../tally-service/tally-service.api", () => ({
-  default: { createKeys: vi.fn(), activateKeys: vi.fn(), getPublicKey: vi.fn() },
+  default: { createKeys: vi.fn(), activateKeys: vi.fn(), getPublicKey: vi.fn(), tallyElection: vi.fn() },
 }));
 
 const httpError = (status: number, title?: string) => ({
@@ -34,6 +35,7 @@ const mocked = {
   tallyCreate: vi.mocked(tallyServiceApi.createKeys),
   tallyActivate: vi.mocked(tallyServiceApi.activateKeys),
   tallyPublic: vi.mocked(tallyServiceApi.getPublicKey),
+  tally: vi.mocked(tallyServiceApi.tallyElection),
 };
 
 const run = async (definitions: ReturnType<typeof buildValidationSteps>, initial?: OperationStep[]) => {
@@ -178,5 +180,47 @@ describe("activación", () => {
     expect(completed).toBe(false);
     expect(steps[1].status).toBe("error");
     expect(mocked.authActivate).not.toHaveBeenCalled();
+  });
+});
+
+describe("escrutinio", () => {
+  it("contabiliza los votos de la elección", async () => {
+    mocked.tally.mockResolvedValue([]);
+
+    const { completed, steps } = await run(buildTallySteps("e1"));
+
+    expect(completed).toBe(true);
+    expect(mocked.tally).toHaveBeenCalledWith("e1");
+    expect(steps[0].status).toBe("done");
+  });
+
+  it("omite el paso si otro intento ya terminó el conteo", async () => {
+    mocked.tally.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { code: "ELECTION_ALREADY_TALLIED" } },
+    });
+
+    const { completed, steps } = await run(buildTallySteps("e1"));
+
+    expect(completed).toBe(true);
+    expect(steps[0].status).toBe("skipped");
+  });
+
+  it("no confunde otros conflictos con un conteo ya terminado", async () => {
+    mocked.tally.mockRejectedValue(httpError(409));
+
+    const { completed, steps } = await run(buildTallySteps("e1"));
+
+    expect(completed).toBe(false);
+    expect(steps[0].status).toBe("error");
+  });
+
+  it("reporta el error si el conteo falla", async () => {
+    mocked.tally.mockRejectedValue(httpError(500));
+
+    const { completed, steps } = await run(buildTallySteps("e1"));
+
+    expect(completed).toBe(false);
+    expect(steps[0].status).toBe("error");
   });
 });

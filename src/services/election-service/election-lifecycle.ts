@@ -2,10 +2,10 @@ import authorizationServiceApi from "../authorization-service/authorization.api"
 import tallyServiceApi from "../tally-service/tally-service.api";
 import electionServiceApi from "./election.api";
 import type { ElectionStatus } from "./election.types";
-import { getApiErrorMessage, getHttpStatus, getProblemTitle, type ApiErrorContext } from "../../errors/apiErrorMap";
+import { getApiErrorMessage, getHttpStatus, getProblemCode, getProblemTitle, type ApiErrorContext } from "../../errors/apiErrorMap";
 
 /**
- * Orquestación de las operaciones de validación y activación de una elección.
+ * Orquestación de las operaciones de validación, activación y escrutinio de una elección.
  *
  * El backend de `election-service` solo cambia el estado de la elección; las claves
  * criptográficas viven en `authorization-service` (firma ciega) y `tally-service`
@@ -48,6 +48,9 @@ export const isAuthorizationKeyAlreadyCreated = (error: unknown) =>
 
 /** tally-service responde 409 cuando las llaves de cifrado ya existen. */
 export const isEncryptionKeyAlreadyCreated = (error: unknown) => getHttpStatus(error) === 409;
+
+/** tally-service lo indica cuando otro intento ya terminó el conteo de la elección. */
+export const isElectionAlreadyTallied = (error: unknown) => getProblemCode(error) === "ELECTION_ALREADY_TALLIED";
 
 export function buildValidationSteps(electionId: string, status: ElectionStatus): StepDefinition[] {
   return [
@@ -123,6 +126,26 @@ export function buildActivationSteps(electionId: string, status: ElectionStatus)
         const key = await tallyServiceApi.getPublicKey(electionId);
         if (key.status === "ACTIVE") return { skipped: "Las claves ya estaban habilitadas." };
         await tallyServiceApi.activateKeys(electionId);
+      },
+    },
+  ];
+}
+
+export function buildTallySteps(electionId: string): StepDefinition[] {
+  return [
+    {
+      id: "tally",
+      label: "Descifrar y contabilizar los votos",
+      errorContext: "tally",
+      run: async () => {
+        // tally-service guarda los resultados y cambia la elección a FINISHED en la misma solicitud.
+        // Si un intento anterior solo guardó los resultados, los reutiliza y termina de finalizarla.
+        try {
+          await tallyServiceApi.tallyElection(electionId);
+        } catch (error) {
+          if (isElectionAlreadyTallied(error)) return { skipped: "La elección ya estaba contabilizada." };
+          throw error;
+        }
       },
     },
   ];

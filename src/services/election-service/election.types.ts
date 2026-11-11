@@ -13,6 +13,7 @@ export type Candidate = {
   lastName: string;
   description: string;
   isActive: boolean;
+  hasPhoto: boolean;
 }
 export type Candidacy = {
   candidacyId: string;

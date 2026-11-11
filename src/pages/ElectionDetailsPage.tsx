@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   ArrowBack,
   BarChartOutlined,
@@ -13,11 +12,6 @@ import {
   Container,
   Paper,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   Typography,
 } from "@mui/material";
 import { Link as RouterLink, useParams } from "react-router-dom";
@@ -27,8 +21,6 @@ import useElectionDetails from "../hooks/election-service/useElectionDetails";
 import { useKeycloak } from "../auth/useKeycloak";
 import ElectionStatusChip from "../components/election/ElectionStatusChip";
 import ElectionManagementPanel from "../components/election/ElectionManagementPanel";
-import tallyServiceApi from "../services/tally-service/tally-service.api";
-import type { ElectionTallyResult } from "../services/tally-service/tally-service.types";
 import { getApiErrorMessage } from "../errors/apiErrorMap";
 
 const formatDate = (date: string) =>
@@ -44,10 +36,6 @@ function ElectionDetailsPage() {
   const isAdmin = roles.includes("ROLE_ADMIN");
   const isAuthority = roles.includes("ROLE_AUTHORITY");
   const isVoter = roles.includes("ROLE_VOTER");
-  const [actionError, setActionError] = useState("");
-  const [actionMessage, setActionMessage] = useState("");
-  const [countingVotes, setCountingVotes] = useState(false);
-  const [tallyResults, setTallyResults] = useState<ElectionTallyResult[] | null>(null);
 
   if (loading) return <LoadingPage message="Cargando detalle de la elección..." />;
   if (error || !election) {
@@ -61,20 +49,6 @@ function ElectionDetailsPage() {
       </Container>
     );
   }
-
-  const countVotes = async () => {
-    setCountingVotes(true);
-    setActionError("");
-    setActionMessage("");
-    try {
-      setTallyResults(await tallyServiceApi.tallyElection(election.electionId));
-      setActionMessage("El conteo finalizó correctamente.");
-    } catch (tallyError) {
-      setActionError(getApiErrorMessage(tallyError, "tally"));
-    } finally {
-      setCountingVotes(false);
-    }
-  };
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
@@ -150,59 +124,13 @@ function ElectionDetailsPage() {
           </Stack>
 
           {(isAuthority || isAdmin) && (
-            <>
-              <ElectionManagementPanel
-                election={election}
-                roles={{ isAdmin, isAuthority }}
-                onChanged={() => void reload().catch(() => undefined)}
-                onCountVotes={() => void countVotes()}
-                countingVotes={countingVotes}
-              />
-              {actionError && <Alert severity="error" sx={{ mt: 2 }}>{actionError}</Alert>}
-              {actionMessage && <Alert severity="success" sx={{ mt: 2 }}>{actionMessage}</Alert>}
-            </>
+            <ElectionManagementPanel
+              election={election}
+              roles={{ isAdmin, isAuthority }}
+              onChanged={() => void reload().catch(() => undefined)}
+            />
           )}
         </Paper>
-
-        {tallyResults && (
-          <Paper variant="outlined" sx={{ mt: 3, borderColor: "divider", overflow: "hidden" }}>
-            <Box sx={{ p: 2 }}>
-              <Typography variant="h6">Resultados del conteo</Typography>
-            </Box>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Cargo</TableCell>
-                  <TableCell>Candidatura</TableCell>
-                  <TableCell align="right">Votos contabilizados</TableCell>
-                  <TableCell align="right">Resultado</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {tallyResults.map((result, index) => {
-                  const position = election.positions.find(
-                    (item) => item.electionPositionId === result.electionPositionId,
-                  );
-                  const candidacy = position?.candidacies.find(
-                    (item) => item.candidacyId === result.candidacyId,
-                  );
-                  return (
-                    <TableRow key={`${result.electionPositionId}-${result.candidacyId}-${index}`}>
-                      <TableCell>{position?.positionName ?? result.electionPositionId}</TableCell>
-                      <TableCell>
-                        {candidacy
-                          ? `${candidacy.candidate.name} ${candidacy.candidate.lastName}`
-                          : result.candidacyId}
-                      </TableCell>
-                      <TableCell align="right">{result.totalVotes}</TableCell>
-                      <TableCell align="right">{result.result}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </Paper>
-        )}
 
         <Typography variant="h5" sx={{ mt: 4, mb: 2, fontWeight: 700 }}>Cargos y candidaturas</Typography>
         {election.positions.length === 0 ? (

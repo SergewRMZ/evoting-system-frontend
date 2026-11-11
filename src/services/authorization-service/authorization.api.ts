@@ -7,6 +7,16 @@ const authorizationServiceApi = {
         return response.data;
     },
 
+    /**
+     * Devuelve la llave de la elección en cualquier estado, a diferencia de
+     * `getPublicKey`, que solo responde cuando está ACTIVE.
+     * Roles: ROLE_ADMIN | ROLE_AUTHORITY
+     */
+    getKeys: async (electionId: string): Promise<AuthorizationKeys> => {
+        const response = await apiClient.get(`/api/authorization-service/elections/${encodeURIComponent(electionId)}/keys`);
+        return response.data;
+    },
+
     createKeys: async (electionId: string): Promise<AuthorizationKeys> => {
         const response = await apiClient.post(`/api/authorization-service/elections/${encodeURIComponent(electionId)}/keys`);
         return response.data;

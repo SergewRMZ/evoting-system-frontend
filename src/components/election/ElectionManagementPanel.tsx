@@ -24,14 +24,14 @@ import ElectionLifecycleStepper from "./ElectionLifecycleStepper";
 import ElectionStatusChip from "./ElectionStatusChip";
 import ElectionValidationDialog from "./ElectionValidationDialog";
 import ElectionActivationDialog from "./ElectionActivationDialog";
+import ElectionTallyDialog from "./ElectionTallyDialog";
+import ElectionKeysPanel from "./ElectionKeysPanel";
 
 type ElectionManagementPanelProps = {
   election: ElectionDetails;
   roles: ElectionRoles;
   /** Vuelve a cargar la elección después de una operación que cambió su estado. */
   onChanged: () => void;
-  onCountVotes: () => void;
-  countingVotes: boolean;
 };
 
 const GROUP_TITLES: Record<ElectionActionGroup, string> = {
@@ -52,11 +52,11 @@ const ACTION_ICONS: Record<ElectionActionId, ReactNode> = {
 
 /**
  * Panel de gestión del ciclo de vida: etapa actual, siguiente paso y las acciones
- * disponibles según el estado y el rol. Las operaciones de validación y activación
- * siempre pasan por un diálogo de confirmación.
+ * disponibles según el estado y el rol. Las operaciones de validación, activación
+ * y escrutinio siempre pasan por un diálogo de confirmación.
  */
-function ElectionManagementPanel({ election, roles, onChanged, onCountVotes, countingVotes }: ElectionManagementPanelProps) {
-  const [openDialog, setOpenDialog] = useState<"validation" | "activation" | null>(null);
+function ElectionManagementPanel({ election, roles, onChanged }: ElectionManagementPanelProps) {
+  const [openDialog, setOpenDialog] = useState<"validation" | "activation" | "tally" | null>(null);
   const [openedAt, setOpenedAt] = useState(0);
   const actions = getElectionActions(election.status, roles);
 
@@ -72,7 +72,7 @@ function ElectionManagementPanel({ election, roles, onChanged, onCountVotes, cou
   const handleAction = (action: ElectionAction) => {
     if (action.id === "validate" || action.id === "complete-validation") setOpenDialog("validation");
     else if (action.id === "activate" || action.id === "complete-activation") openActivation();
-    else if (action.id === "tally") onCountVotes();
+    else if (action.id === "tally") setOpenDialog("tally");
   };
 
   const handleDialogClose = (changed: boolean) => {
@@ -124,10 +124,10 @@ function ElectionManagementPanel({ election, roles, onChanged, onCountVotes, cou
                         <Button
                           variant={action.primary ? "contained" : "outlined"}
                           startIcon={ACTION_ICONS[action.id]}
-                          disabled={!action.enabled || (action.id === "tally" && countingVotes)}
+                          disabled={!action.enabled}
                           onClick={() => handleAction(action)}
                         >
-                          {action.id === "tally" && countingVotes ? "Contabilizando..." : action.label}
+                          {action.label}
                         </Button>
                       )}
                       {!action.enabled && action.reason && (
@@ -142,8 +142,11 @@ function ElectionManagementPanel({ election, roles, onChanged, onCountVotes, cou
         </Stack>
       )}
 
+      <ElectionKeysPanel election={election} />
+
       <ElectionValidationDialog open={openDialog === "validation"} election={election} onClose={handleDialogClose} />
       <ElectionActivationDialog open={openDialog === "activation"} election={election} openedAt={openedAt} onClose={handleDialogClose} />
+      <ElectionTallyDialog open={openDialog === "tally"} election={election} onClose={handleDialogClose} />
     </Box>
   );
 }

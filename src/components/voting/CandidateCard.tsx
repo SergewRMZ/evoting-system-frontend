@@ -9,6 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import type { Candidacy, Candidate } from "../../services/election-service/election.types";
+import { getCandidatePhotoUrl } from "../../utils/candidatePhoto";
 
 const avatarColors = ["#155eef", "#7f56d9", "#039855", "#dc6803"];
 
@@ -59,6 +60,8 @@ function CandidateCard({
           sx={{ justifyContent: "space-between", alignItems: "flex-start" }}
         >
           <Avatar
+            src={candidate.hasPhoto ? getCandidatePhotoUrl(candidate.id) : undefined}
+            alt={`${candidate.name} ${candidate.lastName}`.trim()}
             sx={{
               width: 56,
               height: 56,

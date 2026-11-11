@@ -38,6 +38,8 @@ const contextMessages: Record<ApiErrorContext, HttpStatusMap> = {
     403: "No tienes permiso para acceder a esta elección.",
     404: "La elección solicitada no fue encontrada.",
     409: "La elección no puede pasar a ese estado en este momento (estado incompatible).",
+    413: "La imagen supera el tamaño máximo permitido de 2 MB.",
+    415: "Formato de imagen no permitido. Usa una imagen JPG, PNG o WebP.",
     500: "Ocurrió un error interno al procesar la elección. Inténtalo más tarde.",
   },
   authorization: {
@@ -148,4 +150,13 @@ export function getProblemTitle(error: unknown): string | undefined {
   const axiosError = error as { isAxiosError?: boolean; response?: { data?: { title?: unknown } } };
   const title = axiosError?.isAxiosError ? axiosError.response?.data?.title : undefined;
   return typeof title === "string" ? title : undefined;
+}
+
+/**
+ * Código de negocio (`code`) del ProblemDetail que devuelve el backend, si existe.
+ */
+export function getProblemCode(error: unknown): string | undefined {
+  const axiosError = error as { isAxiosError?: boolean; response?: { data?: { code?: unknown } } };
+  const code = axiosError?.isAxiosError ? axiosError.response?.data?.code : undefined;
+  return typeof code === "string" ? code : undefined;
 }

@@ -14,7 +14,6 @@ export type ElectionTallyResult = {
     id: string | null;
     electionPositionId: string;
     candidacyId: string;
-    totalVotes: number;
     result: number;
     createdAt: string;
 };

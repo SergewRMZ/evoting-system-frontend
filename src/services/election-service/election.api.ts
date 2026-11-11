@@ -75,6 +75,17 @@ const electionServiceApi = {
         return response.data;
     },
 
+    uploadCandidatePhoto: async (candidateId: string, file: File): Promise<void> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        // Sin este encabezado, axios convertiría el FormData a JSON por el Content-Type del cliente.
+        await apiClient.put(
+            `/api/election-service/candidates/${encodeURIComponent(candidateId)}/photo`,
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } },
+        );
+    },
+
     addCandidacies: async (electionPositionId: string, candidateIds: string[]): Promise<CreateCandidacyResponse[]> => {
         const response = await apiClient.post(
             `/api/election-service/election-positions/${encodeURIComponent(electionPositionId)}/candidacies`,

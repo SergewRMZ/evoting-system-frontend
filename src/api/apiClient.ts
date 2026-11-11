@@ -8,6 +8,15 @@ export const apiClient = axios.create({
   },
 });
 
+// Cliente sin token para endpoints públicos: el voto no debe viajar junto con la
+// identidad del votante.
+export const publicApiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 // ── Interceptor de REQUEST ────────────────────────────────────────────────────
 apiClient.interceptors.request.use(async (config) => {
   if (keycloak.authenticated) {

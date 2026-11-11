@@ -1,10 +1,10 @@
 import type { SignedVote } from "../../types/vote.types";
 import type { BulletinBoardPage, SubmitVoteResponse } from "./bulletin-board.types";
-import { apiClient } from "../../api/apiClient";
+import { apiClient, publicApiClient } from "../../api/apiClient";
 
 const bulletinBoardServiceApi = {
     submitVote: async(signedVote: SignedVote, electionId: string): Promise<SubmitVoteResponse> => {
-        const response = await apiClient.post(`/api/bulletin-board/elections/${encodeURIComponent(electionId)}/votes`, signedVote);
+        const response = await publicApiClient.post(`/api/bulletin-board/elections/${encodeURIComponent(electionId)}/votes`, signedVote);
         return response.data;
     },
 

@@ -1,13 +1,15 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   ArrowBack,
   CampaignOutlined,
   EditOutlined,
   PersonAddAlt1Outlined,
+  PhotoCameraOutlined,
 } from "@mui/icons-material";
 import {
   Alert,
   Autocomplete,
+  Avatar,
   Box,
   Button,
   Container,
@@ -40,8 +42,15 @@ import type {
 import { getApiErrorMessage, getHttpStatus } from "../errors/apiErrorMap";
 import ElectionFormDialog from "../components/election/ElectionFormDialog";
 import ElectionStatusChip from "../components/election/ElectionStatusChip";
+import CandidatePhotoCatalog from "../components/election/CandidatePhotoCatalog";
 import { electionToFormValues } from "../utils/electionForm";
 import { isElectionReadyToPublish } from "../utils/electionStatus";
+import {
+  CANDIDATE_PHOTO_ACCEPT,
+  CANDIDATE_PHOTO_HINT,
+  getCandidatePhotoErrorMessage,
+  validateCandidatePhoto,
+} from "../utils/candidatePhoto";
 
 function ElectionConfigurationPage() {
   const { electionId } = useParams<{ electionId: string }>();
@@ -69,6 +78,29 @@ function ElectionConfigurationPage() {
     lastName: "",
     description: "",
   });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoError, setPhotoError] = useState("");
+
+  const photoPreview = useMemo(() => (photoFile ? URL.createObjectURL(photoFile) : ""), [photoFile]);
+  // Libera la URL temporal de la vista previa al cambiar o quitar la foto.
+  useEffect(() => () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+  }, [photoPreview]);
+
+  const selectPhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Permite volver a elegir el mismo archivo después de quitarlo.
+    event.target.value = "";
+    if (!file) return;
+    const validationError = validateCandidatePhoto(file);
+    setPhotoError(validationError ?? "");
+    setPhotoFile(validationError ? null : file);
+  };
+
+  const clearPhoto = () => {
+    setPhotoFile(null);
+    setPhotoError("");
+  };
 
   const refreshElection = async () => {
     if (!electionId) return;
@@ -200,9 +232,24 @@ function ElectionConfigurationPage() {
         lastName: newCandidate.lastName.trim(),
         description: newCandidate.description.trim(),
       });
-      setCandidates((current) => [...current, candidate]);
+      let registered = candidate;
+      let photoUploadError = "";
+      if (photoFile) {
+        try {
+          await electionServiceApi.uploadCandidatePhoto(candidate.id, photoFile);
+          registered = { ...candidate, hasPhoto: true };
+        } catch (uploadError) {
+          photoUploadError = getCandidatePhotoErrorMessage(uploadError);
+        }
+      }
+      setCandidates((current) => [...current, registered]);
       setNewCandidate({ name: "", lastName: "", description: "" });
-      setMessage("El candidato se registró correctamente.");
+      clearPhoto();
+      if (photoUploadError) {
+        setError(`El candidato se registró, pero sin fotografía: ${photoUploadError} Puedes agregarla desde el catálogo de candidatos.`);
+      } else {
+        setMessage("El candidato se registró correctamente.");
+      }
     } catch (operationError) {
       setError(getApiErrorMessage(operationError, "election", "No se pudo registrar el candidato."));
     } finally {
@@ -448,20 +495,46 @@ function ElectionConfigurationPage() {
 
               <Paper variant="outlined" sx={{ p: { xs: 2, md: 2.5 }, mb: 3, borderColor: "divider" }}>
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>Registrar un candidato nuevo</Typography>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  El contrato del endpoint de creación de candidatos requiere ROLE_VOTER. Si tu cuenta administradora no tiene ese rol, la API rechazará el registro.
-                </Alert>
                 <Box component="form" onSubmit={createCandidate}>
                   <Stack spacing={2}>
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                       <TextField label="Nombre" value={newCandidate.name} onChange={(event) => setNewCandidate({ ...newCandidate, name: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
                       <TextField label="Apellido" value={newCandidate.lastName} onChange={(event) => setNewCandidate({ ...newCandidate, lastName: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 50 } }} fullWidth />
                     </Stack>
-                    <TextField label="Descripción" value={newCandidate.description} onChange={(event) => setNewCandidate({ ...newCandidate, description: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 100 } }} fullWidth />
+                    <TextField label="Descripción" value={newCandidate.description} onChange={(event) => setNewCandidate({ ...newCandidate, description: event.target.value })} disabled={!canConfigure || busy} required slotProps={{ htmlInput: { maxLength: 300 } }} helperText={`${newCandidate.description.length}/300`} fullWidth />
+                    <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
+                      <Avatar src={photoPreview || undefined} alt="Vista previa de la fotografía" sx={{ width: 64, height: 64 }}>
+                        <PhotoCameraOutlined />
+                      </Avatar>
+                      <Box>
+                        <Stack direction="row" spacing={1}>
+                          <Button component="label" variant="text" disabled={!canConfigure || busy}>
+                            {photoFile ? "Cambiar fotografía" : "Agregar fotografía"}
+                            <input type="file" hidden accept={CANDIDATE_PHOTO_ACCEPT} onChange={selectPhoto} />
+                          </Button>
+                          {photoFile && (
+                            <Button variant="text" color="inherit" onClick={clearPhoto} disabled={busy}>Quitar</Button>
+                          )}
+                        </Stack>
+                        <Typography variant="body2" color={photoError ? "error" : "text.secondary"} role={photoError ? "alert" : undefined}>
+                          {photoError || (photoFile ? photoFile.name : CANDIDATE_PHOTO_HINT)}
+                        </Typography>
+                      </Box>
+                    </Stack>
                     <Box><Button type="submit" variant="outlined" startIcon={<PersonAddAlt1Outlined />} disabled={!canConfigure || busy}>Registrar candidato</Button></Box>
                   </Stack>
                 </Box>
               </Paper>
+
+              <CandidatePhotoCatalog
+                candidates={candidates}
+                disabled={!canConfigure || busy}
+                onPhotoUploaded={(candidateId) =>
+                  setCandidates((current) =>
+                    current.map((candidate) => (candidate.id === candidateId ? { ...candidate, hasPhoto: true } : candidate)),
+                  )
+                }
+              />
 
               {candidateError && (
                 <Alert

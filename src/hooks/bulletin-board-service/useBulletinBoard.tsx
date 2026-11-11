@@ -14,6 +14,15 @@ export class VoteAlreadyRegisteredError extends Error {
     }
 }
 
+// El tablón también responde 409 cuando la elección no está activa, pero en ese
+// caso el voto no quedó registrado.
+function isElectionNotActive(error: unknown): boolean {
+    if (!axios.isAxiosError(error)) return false;
+    const data: unknown = error.response?.data;
+    if (!data || typeof data !== "object") return false;
+    return (data as Record<string, unknown>).title === "Election Not Active";
+}
+
 function getVoteIdFromConflict(error: unknown): string | undefined {
     if (!axios.isAxiosError(error)) return undefined;
     const data: unknown = error.response?.data;
@@ -32,6 +41,9 @@ const useBulletinBoard = () => {
             const data = await bulletinBoardServiceApi.submitVote(signedVote, electionId);
             return data;
         } catch (error) {
+            if (isElectionNotActive(error)) {
+                throw new Error("La elección ya no está activa. Tu voto no fue registrado.", { cause: error });
+            }
             if (axios.isAxiosError(error) && error.response?.status === 409) {
                 throw new VoteAlreadyRegisteredError(getVoteIdFromConflict(error));
             }
