@@ -6,7 +6,6 @@ import {
   Chip,
   CircularProgress,
   Container,
-  Divider,
   Paper,
   Stack,
   Typography,
@@ -14,7 +13,7 @@ import {
 import { Link as RouterLink, useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import LoadingPage from "../components/LoadingPage";
-import PositionResultChart from "../components/results/PositionResultChart";
+import ResultsCarousel from "../components/results/ResultsCarousel";
 import useElectionDetails from "../hooks/election-service/useElectionDetails";
 import useElectionResults from "../hooks/tally-service/useElectionResults";
 
@@ -204,20 +203,9 @@ function ElectionResultsPage() {
             <CircularProgress />
           </Box>
         ) : (
-          <Stack spacing={3}>
-            {election.positions.map((position, idx) => (
-              <Paper
-                key={position.electionPositionId}
-                variant="outlined"
-                sx={{ p: { xs: 2, md: 3 }, borderColor: "divider" }}
-              >
-                <PositionResultChart position={position} results={results} />
-                {idx < election.positions.length - 1 && (
-                  <Divider sx={{ mt: 2 }} />
-                )}
-              </Paper>
-            ))}
-          </Stack>
+          results.length > 0 && (
+            <ResultsCarousel positions={election.positions} results={results} />
+          )
         )}
 
         {!loadingResults && results.length === 0 && !resultsError && (

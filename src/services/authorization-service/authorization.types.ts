@@ -25,6 +25,12 @@ export type BlindSignature = {
     userId: string;
 };
 
+/** Si el votante del token ya obtuvo su firma ciega en la elección. */
+export type AuthorizationStatus = {
+    electionId: string;
+    authorized: boolean;
+};
+
 export type AuthorizationKeys = {
     authorizationKeysId: string;
     electionId: string;

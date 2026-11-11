@@ -19,6 +19,7 @@
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
     "json-canonicalize": "^3.0.1",
+    "jspdf": "^4.2.1",
     "keycloak-js": "^26.2.4",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

@@ -37,5 +37,15 @@ export interface SignedVote {
   encryptedVote: EncryptedVotePayload,
   randomizer: string,
   digest: string,
-  signature: string, 
+  signature: string,
+}
+
+/**
+ * Resultado de la autorización: el voto listo para la urna y la firma ciega
+ * que devolvió el servicio de autorización, antes de quitarle el cegado.
+ */
+export interface AuthorizedVote {
+  signedVote: SignedVote;
+  /** Firma ciega s' en Base64, tal como la emitió el servicio. */
+  blindSignature: string;
 }

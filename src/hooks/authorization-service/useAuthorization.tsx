@@ -5,7 +5,7 @@ import type { AuthorizationPublicKey } from "../../services/authorization-servic
 import { createBlindedVoteMessage, unblindVote } from "../../utils/voting/vote.utils";
 import type { ElectionDetails } from "../../services/election-service/election.types";
 import { Uint8ArrayToBase64 } from "../../crypto/crypto.utils";
-import type { SignedVote } from "../../types/vote.types";
+import type { AuthorizedVote } from "../../types/vote.types";
 import { getApiErrorMessage } from "../../errors/apiErrorMap";
 
 const useAuthorization = () => {
@@ -24,7 +24,7 @@ const useAuthorization = () => {
         selectedCandidacies: Record<string, string>,
         encryptionPublicKey: EncryptionPublicKey,
         authorizationPublicKey: AuthorizationPublicKey
-    ): Promise<SignedVote> => {
+    ): Promise<AuthorizedVote> => {
     
         try {
             setLoading(true);
@@ -51,10 +51,13 @@ const useAuthorization = () => {
             );
 
             return {
-                encryptedVote,
-                randomizer: randomizer,
-                digest: Uint8ArrayToBase64(digest),
-                signature
+                signedVote: {
+                    encryptedVote,
+                    randomizer: randomizer,
+                    digest: Uint8ArrayToBase64(digest),
+                    signature
+                },
+                blindSignature: data.blindSignature,
             };
         }   catch(error) {
             throw new Error(
