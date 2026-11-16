@@ -39,7 +39,12 @@ import type {
   ElectionDetails,
   Position,
 } from "../services/election-service/election.types";
-import { getApiErrorMessage, getHttpStatus } from "../errors/apiErrorMap";
+import { getApiErrorMessage, getHttpStatus, getProblemTitle } from "../errors/apiErrorMap";
+
+/** Igual que `CreatePositionDtoRequest` y la columna `position_name`. */
+const POSITION_NAME_MAX_LENGTH = 100;
+const DUPLICATE_POSITION_MESSAGE =
+  "Ya existe un cargo con ese nombre. Selecciónalo de la lista de cargos existentes para asociarlo.";
 import ElectionFormDialog from "../components/election/ElectionFormDialog";
 import ElectionStatusChip from "../components/election/ElectionStatusChip";
 import CandidatePhotoCatalog from "../components/election/CandidatePhotoCatalog";
@@ -195,6 +200,16 @@ function ElectionConfigurationPage() {
       setError("Escribe el nombre del cargo electoral.");
       return;
     }
+    if (newPositionName.trim().length > POSITION_NAME_MAX_LENGTH) {
+      setError(`El nombre del cargo admite como máximo ${POSITION_NAME_MAX_LENGTH} caracteres.`);
+      return;
+    }
+    // Los cargos son únicos (sin distinguir mayúsculas): uno existente se selecciona de la lista.
+    const normalizedName = newPositionName.trim().toLocaleLowerCase();
+    if (positions.some((position) => position.positionName.trim().toLocaleLowerCase() === normalizedName)) {
+      setError(DUPLICATE_POSITION_MESSAGE);
+      return;
+    }
     setBusy(true);
     setError("");
     setMessage("");
@@ -207,7 +222,12 @@ function ElectionConfigurationPage() {
       setNewPositionName("");
       setMessage("El cargo se creó y se asoció a la elección.");
     } catch (operationError) {
-      setError(getApiErrorMessage(operationError, "election", "No se pudo crear o asociar el cargo."));
+      // Otro administrador pudo crearlo mientras tanto.
+      if (getProblemTitle(operationError) === "Position Already Exists") {
+        setError(DUPLICATE_POSITION_MESSAGE);
+      } else {
+        setError(getApiErrorMessage(operationError, "election", "No se pudo crear o asociar el cargo."));
+      }
     } finally {
       setBusy(false);
     }

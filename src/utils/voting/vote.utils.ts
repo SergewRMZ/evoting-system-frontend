@@ -87,7 +87,6 @@ export const createBlindedVoteMessage = async (
         authorizationPublicKey.authorizationKeysId,
     );
     const encryptedVote: EncryptedVotePayload = encryptVote(votePayload, encryptionPublicKey);
-    console.log("JSON:", canonicalize(encryptedVote));
     const digest: Uint8Array = await sha3_384Hash(canonicalize(encryptedVote));
     const blindResult: JsBlindResult = await blindVote(digest, authorizationPublicKey);
     return {

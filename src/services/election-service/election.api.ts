@@ -48,6 +48,12 @@ const electionServiceApi = {
         return response.data;
     },
 
+    /** CLOSED → FINISHED. Solo la autoridad, después de contabilizar los votos. */
+    finishElection: async (electionId: string): Promise<Election> => {
+        const response = await apiClient.patch(`/api/election-service/elections/${encodeURIComponent(electionId)}/finish`);
+        return response.data;
+    },
+
     getPositions: async (): Promise<Position[]> => {
         const response = await apiClient.get("/api/election-service/positions");
         return response.data;

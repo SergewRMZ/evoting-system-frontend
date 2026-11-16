@@ -15,7 +15,7 @@ function ElectionTallyDialog({ open, election, onClose }: ElectionTallyDialogPro
   const { phase, steps, run, reset } = useElectionOperation();
 
   const handleConfirm = () => {
-    void run(buildTallySteps(election.electionId));
+    void run(buildTallySteps(election.electionId, election.status));
   };
 
   const handleClose = () => {

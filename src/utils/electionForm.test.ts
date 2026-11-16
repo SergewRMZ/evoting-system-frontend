@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  ELECTION_DESCRIPTION_MAX_LENGTH,
+  ELECTION_NAME_MAX_LENGTH,
   electionToFormValues,
   hasFormErrors,
   isSameElectionForm,
@@ -25,6 +27,19 @@ describe("validateElectionForm", () => {
   it("exige nombre, descripción y fechas", () => {
     const errors = validateElectionForm({ name: " ", description: "", startDate: "", endDate: "" }, now);
     expect(Object.keys(errors).sort()).toEqual(["description", "endDate", "name", "startDate"]);
+  });
+
+  it("limita la longitud del nombre y la descripción", () => {
+    const errors = validateElectionForm(
+      { ...valid, name: "a".repeat(ELECTION_NAME_MAX_LENGTH + 1), description: "a".repeat(ELECTION_DESCRIPTION_MAX_LENGTH + 1) },
+      now,
+    );
+    expect(errors.name).toMatch(/máximo/);
+    expect(errors.description).toMatch(/máximo/);
+    expect(hasFormErrors(validateElectionForm(
+      { ...valid, name: "a".repeat(ELECTION_NAME_MAX_LENGTH), description: "a".repeat(ELECTION_DESCRIPTION_MAX_LENGTH) },
+      now,
+    ))).toBe(false);
   });
 
   it("rechaza fechas pasadas", () => {

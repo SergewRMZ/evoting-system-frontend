@@ -12,7 +12,7 @@ import {
 } from "./election-lifecycle";
 
 vi.mock("./election.api", () => ({
-  default: { validateElection: vi.fn(), activateElection: vi.fn() },
+  default: { validateElection: vi.fn(), activateElection: vi.fn(), finishElection: vi.fn() },
 }));
 vi.mock("../authorization-service/authorization.api", () => ({
   default: { createKeys: vi.fn(), activateKeys: vi.fn(), getPublicKey: vi.fn() },
@@ -29,6 +29,7 @@ const httpError = (status: number, title?: string) => ({
 const mocked = {
   validate: vi.mocked(electionServiceApi.validateElection),
   activate: vi.mocked(electionServiceApi.activateElection),
+  finish: vi.mocked(electionServiceApi.finishElection),
   authCreate: vi.mocked(authorizationServiceApi.createKeys),
   authActivate: vi.mocked(authorizationServiceApi.activateKeys),
   authPublic: vi.mocked(authorizationServiceApi.getPublicKey),
@@ -184,23 +185,62 @@ describe("activación", () => {
 });
 
 describe("escrutinio", () => {
-  it("contabiliza los votos de la elección", async () => {
-    mocked.tally.mockResolvedValue([]);
+  it("contabiliza los votos y después finaliza la elección", async () => {
+    const order: string[] = [];
+    mocked.tally.mockImplementation(async () => { order.push("tally"); return []; });
+    mocked.finish.mockImplementation(async () => { order.push("finish"); return {} as never; });
 
-    const { completed, steps } = await run(buildTallySteps("e1"));
+    const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
 
     expect(completed).toBe(true);
-    expect(mocked.tally).toHaveBeenCalledWith("e1");
-    expect(steps[0].status).toBe("done");
+    expect(order).toEqual(["tally", "finish"]);
+    expect(mocked.finish).toHaveBeenCalledWith("e1");
+    expect(steps.map((step) => step.status)).toEqual(["done", "done"]);
+  });
+
+  it("no finaliza la elección si el conteo falla", async () => {
+    mocked.tally.mockRejectedValue(httpError(500));
+
+    const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
+
+    expect(completed).toBe(false);
+    expect(mocked.finish).not.toHaveBeenCalled();
+    expect(steps[1].status).toBe("pending");
+  });
+
+  it("al reintentar tras fallar la finalización no vuelve a contar", async () => {
+    mocked.tally.mockResolvedValue([]);
+    mocked.finish.mockRejectedValueOnce(httpError(500));
+    const definitions = buildTallySteps("e1", "CLOSED");
+    const first = await run(definitions);
+    expect(first.completed).toBe(false);
+
+    mocked.finish.mockResolvedValueOnce({} as never);
+    const retry = await run(definitions, first.steps);
+
+    expect(retry.completed).toBe(true);
+    expect(mocked.tally).toHaveBeenCalledTimes(1);
+    expect(mocked.finish).toHaveBeenCalledTimes(2);
+  });
+
+  it("omite la finalización si la elección ya estaba finalizada", async () => {
+    mocked.tally.mockResolvedValue([]);
+
+    const { completed, steps } = await run(buildTallySteps("e1", "FINISHED"));
+
+    expect(completed).toBe(true);
+    expect(mocked.finish).not.toHaveBeenCalled();
+    expect(steps[1].status).toBe("skipped");
   });
 
   it("omite el paso si otro intento ya terminó el conteo", async () => {
+    mocked.finish.mockResolvedValue({} as never);
     mocked.tally.mockRejectedValue({
       isAxiosError: true,
       response: { status: 409, data: { code: "ELECTION_ALREADY_TALLIED" } },
     });
 
-    const { completed, steps } = await run(buildTallySteps("e1"));
+    const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
 
     expect(completed).toBe(true);
     expect(steps[0].status).toBe("skipped");
@@ -209,7 +249,7 @@ describe("escrutinio", () => {
   it("no confunde otros conflictos con un conteo ya terminado", async () => {
     mocked.tally.mockRejectedValue(httpError(409));
 
-    const { completed, steps } = await run(buildTallySteps("e1"));
+    const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
 
     expect(completed).toBe(false);
     expect(steps[0].status).toBe("error");
@@ -218,7 +258,7 @@ describe("escrutinio", () => {
   it("reporta el error si el conteo falla", async () => {
     mocked.tally.mockRejectedValue(httpError(500));
 
-    const { completed, steps } = await run(buildTallySteps("e1"));
+    const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
 
     expect(completed).toBe(false);
     expect(steps[0].status).toBe("error");

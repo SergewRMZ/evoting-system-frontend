@@ -131,21 +131,30 @@ export function buildActivationSteps(electionId: string, status: ElectionStatus)
   ];
 }
 
-export function buildTallySteps(electionId: string): StepDefinition[] {
+export function buildTallySteps(electionId: string, status: ElectionStatus): StepDefinition[] {
   return [
     {
       id: "tally",
       label: "Descifrar y contabilizar los votos",
       errorContext: "tally",
       run: async () => {
-        // tally-service guarda los resultados y cambia la elección a FINISHED en la misma solicitud.
-        // Si un intento anterior solo guardó los resultados, los reutiliza y termina de finalizarla.
+        // tally-service solo guarda los resultados; no cambia el estado de la elección.
         try {
           await tallyServiceApi.tallyElection(electionId);
         } catch (error) {
           if (isElectionAlreadyTallied(error)) return { skipped: "La elección ya estaba contabilizada." };
           throw error;
         }
+      },
+    },
+    {
+      id: "finish",
+      label: "Cambiar el estado de la elección a Finalizada",
+      errorContext: "election",
+      run: async () => {
+        // Va después del conteo: los resultados solo se publican cuando la elección está FINISHED.
+        if (status === "FINISHED") return { skipped: "La elección ya estaba finalizada." };
+        await electionServiceApi.finishElection(electionId);
       },
     },
   ];

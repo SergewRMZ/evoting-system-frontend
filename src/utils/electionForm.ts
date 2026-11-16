@@ -36,9 +36,13 @@ export const electionToFormValues = (election: {
   endDate: toDateTimeLocal(election.endDate),
 });
 
+/** Mismos límites que `CreateElectionDtoRequest`, `UpdateElectionDtoRequest` y la tabla `elections`. */
+export const ELECTION_NAME_MAX_LENGTH = 150;
+export const ELECTION_DESCRIPTION_MAX_LENGTH = 1000;
+
 /**
  * Reglas equivalentes a las del backend (`CreateElectionDtoRequest` y
- * `UpdateElectionDtoRequest`): campos obligatorios, fechas futuras e inicio < fin.
+ * `UpdateElectionDtoRequest`): campos obligatorios, longitud máxima, fechas futuras e inicio < fin.
  */
 export function validateElectionForm(values: ElectionFormValues, now: Date = new Date()): ElectionFormErrors {
   const errors: ElectionFormErrors = {};
@@ -48,7 +52,12 @@ export function validateElectionForm(values: ElectionFormValues, now: Date = new
   const validEnd = values.endDate !== "" && !Number.isNaN(end.getTime());
 
   if (!values.name.trim()) errors.name = "Escribe el nombre de la elección.";
+  else if (values.name.length > ELECTION_NAME_MAX_LENGTH)
+    errors.name = `El nombre admite como máximo ${ELECTION_NAME_MAX_LENGTH} caracteres.`;
+
   if (!values.description.trim()) errors.description = "Escribe una descripción.";
+  else if (values.description.length > ELECTION_DESCRIPTION_MAX_LENGTH)
+    errors.description = `La descripción admite como máximo ${ELECTION_DESCRIPTION_MAX_LENGTH} caracteres.`;
 
   if (!validStart) errors.startDate = "Indica la fecha y hora de inicio.";
   else if (start <= now) errors.startDate = "La fecha de inicio debe ser futura.";
