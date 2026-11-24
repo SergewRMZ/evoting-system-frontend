@@ -28,6 +28,7 @@ import {
 import { Link as RouterLink, useParams, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import VoteVerificationPanel from "../components/voting/VoteVerificationPanel";
+import { useKeycloak } from "../auth/useKeycloak";
 import LoadingPage from "../components/LoadingPage";
 import bulletinBoardServiceApi from "../services/bulletin-board-service/bulletin-board.api";
 import type {
@@ -54,6 +55,8 @@ async function getVoteDigest(vote: BulletinBoardVote): Promise<string> {
 
 function BulletinBoardPage() {
   const { electionId } = useParams<{ electionId: string }>();
+  // El tablón es público; el regreso al detalle solo aplica con sesión iniciada.
+  const { authenticated } = useKeycloak();
   // El comprobante enlaza al tablón con ?voteId=..., para buscar el voto al abrirlo.
   const [searchParams] = useSearchParams();
   const initialVoteId = searchParams.get("voteId")?.trim() ?? "";
@@ -148,9 +151,11 @@ function BulletinBoardPage() {
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Navbar />
       <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
-        <Button component={RouterLink} to={`/vote/${electionId ?? ""}`} size="small" startIcon={<ArrowBack fontSize="small" />} sx={{ mb: 2, ml: -1, color: "text.secondary" }}>
-          Volver al detalle
-        </Button>
+        {authenticated && (
+          <Button component={RouterLink} to={`/vote/${electionId ?? ""}`} size="small" startIcon={<ArrowBack fontSize="small" />} sx={{ mb: 2, ml: -1, color: "text.secondary" }}>
+            Volver al detalle
+          </Button>
+        )}
         <Typography variant="overline" color="secondary.main">REGISTRO PÚBLICO</Typography>
         <Typography variant="h4" component="h1" sx={{ fontSize: { xs: "1.625rem", md: "2rem" }, mt: 0.5 }}>
           Tablón de anuncios

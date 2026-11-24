@@ -1,6 +1,6 @@
 import type { SignedVote } from "../../types/vote.types";
 import type { BulletinBoardPage, SubmitVoteResponse } from "./bulletin-board.types";
-import { apiClient, publicApiClient } from "../../api/apiClient";
+import { publicApiClient } from "../../api/apiClient";
 
 const bulletinBoardServiceApi = {
     submitVote: async(signedVote: SignedVote, electionId: string): Promise<SubmitVoteResponse> => {
@@ -8,8 +8,10 @@ const bulletinBoardServiceApi = {
         return response.data;
     },
 
+    // La consulta del tablón va sin token: auditar no requiere cuenta, y así el
+    // servidor no puede asociar la búsqueda de un voto con la identidad de quien busca.
     getVotes: async (electionId: string, page = 0, size = 10): Promise<BulletinBoardPage> => {
-        const response = await apiClient.get(
+        const response = await publicApiClient.get(
             `/api/bulletin-board/elections/${encodeURIComponent(electionId)}/votes`,
             { params: { page, size } },
         );

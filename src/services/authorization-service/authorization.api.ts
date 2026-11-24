@@ -1,9 +1,10 @@
-import { apiClient } from "../../api/apiClient"
+import { apiClient, publicApiClient } from "../../api/apiClient"
 import type { AuthorizationKeys, AuthorizationPublicKey, AuthorizationStatus, BlindSignature } from "./authorization.types";
 
 const authorizationServiceApi = {
+    /** Endpoint público: se consulta sin token, también para auditar el tablón sin sesión. */
     getPublicKey: async (electionId: string): Promise<AuthorizationPublicKey> => {
-        const response = await apiClient.get(`/api/authorization-service/elections/${encodeURIComponent(electionId)}/keys/public`);
+        const response = await publicApiClient.get(`/api/authorization-service/elections/${encodeURIComponent(electionId)}/keys/public`);
         return response.data;
     },
 

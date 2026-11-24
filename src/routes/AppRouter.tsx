@@ -29,6 +29,9 @@ function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/start" element={<StartRedirect />} />
 
+        {/* Tablón público: cualquiera puede auditar los votos, sin iniciar sesión */}
+        <Route path="/vote/:electionId/bulletin" element={<BulletinBoardPage />} />
+
         {/* Cuenta autenticada pero aún no aprobada */}
         <Route element={<ProtectedRoute />}>
           <Route path="/pending" element={<PendingAccountPage />} />
@@ -44,7 +47,6 @@ function AppRouter() {
         >
           <Route path="/vote" element={<ElectionsPage />} />
           <Route path="/vote/:electionId" element={<ElectionDetailsPage />} />
-          <Route path="/vote/:electionId/bulletin" element={<BulletinBoardPage />} />
           {/* Resultados finales: accesibles para todos los roles, controlado en la vista */}
           <Route path="/vote/:electionId/results" element={<ElectionResultsPage />} />
         </Route>
