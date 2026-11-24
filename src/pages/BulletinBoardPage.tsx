@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowBack,
   Search,
@@ -25,8 +25,9 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useParams, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import VoteVerificationPanel from "../components/voting/VoteVerificationPanel";
 import LoadingPage from "../components/LoadingPage";
 import bulletinBoardServiceApi from "../services/bulletin-board-service/bulletin-board.api";
 import type {
@@ -53,12 +54,15 @@ async function getVoteDigest(vote: BulletinBoardVote): Promise<string> {
 
 function BulletinBoardPage() {
   const { electionId } = useParams<{ electionId: string }>();
+  // El comprobante enlaza al tablón con ?voteId=..., para buscar el voto al abrirlo.
+  const [searchParams] = useSearchParams();
+  const initialVoteId = searchParams.get("voteId")?.trim() ?? "";
   const [pageNumber, setPageNumber] = useState(0);
   const [pageData, setPageData] = useState<BulletinBoardPageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadedPage, setLoadedPage] = useState(-1);
   const [error, setError] = useState("");
-  const [voteIdInput, setVoteIdInput] = useState("");
+  const [voteIdInput, setVoteIdInput] = useState(initialVoteId);
   const [searchedVote, setSearchedVote] = useState<BulletinBoardVote | null>(null);
   const [searchError, setSearchError] = useState("");
   const [searching, setSearching] = useState(false);
@@ -98,13 +102,13 @@ function BulletinBoardPage() {
     };
   }, [electionId, pageNumber]);
 
-  const searchVote = async () => {
-    if (!electionId || !voteIdInput.trim()) return;
+  const searchVote = async (voteId: string) => {
+    if (!electionId || !voteId) return;
     setSearching(true);
     setSearchError("");
     setSearchedVote(null);
     try {
-      const result = await bulletinBoardServiceApi.findVote(electionId, voteIdInput.trim());
+      const result = await bulletinBoardServiceApi.findVote(electionId, voteId);
       const foundVote = result.vote;
       if (foundVote) {
         const digest = await getVoteDigest(foundVote);
@@ -120,6 +124,22 @@ function BulletinBoardPage() {
       setSearching(false);
     }
   };
+
+  // Sin preventDefault, el navegador envía el formulario y recarga la página,
+  // lo que pierde la sesión de Keycloak y regresa al inicio de sesión.
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void searchVote(voteIdInput.trim());
+  };
+
+  const searchedInitialVote = useRef(false);
+  useEffect(() => {
+    if (searchedInitialVote.current || !initialVoteId) return;
+    searchedInitialVote.current = true;
+    void searchVote(initialVoteId);
+    // Solo al abrir la página desde el enlace del comprobante.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialVoteId]);
 
   const isLoading = Boolean(electionId) && (loading || loadedPage !== pageNumber);
   if (isLoading && !pageData) return <LoadingPage message="Consultando votos registrados..." />;
@@ -139,10 +159,13 @@ function BulletinBoardPage() {
           Votos cifrados registrados en esta elección. Los datos publicados no revelan la selección en texto claro.
         </Typography>
 
-        <Paper component="form" onSubmit={searchVote} variant="outlined" sx={{ p: 2, borderColor: "divider", mb: 3 }}>
+        <Paper component="form" onSubmit={handleSearchSubmit} variant="outlined" sx={{ p: 2, borderColor: "divider", mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+            Consulta tu voto con el identificador de tu comprobante y verifica su firma digital.
+          </Typography>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
             <TextField
-              label="Buscar por identificador del registro"
+              label="Identificador del voto"
               value={voteIdInput}
               onChange={(event) => setVoteIdInput(event.target.value)}
               fullWidth
@@ -155,16 +178,32 @@ function BulletinBoardPage() {
         </Paper>
 
         {(error || !electionId) && <Alert severity="error" sx={{ mb: 2 }}>{error || "No se proporcionó el identificador de la elección."}</Alert>}
-        {searchedVote && (
-          <Paper variant="outlined" sx={{ p: 2, mb: 2, borderColor: "primary.main" }}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
+        {searchedVote && electionId && (
+          <Paper variant="outlined" sx={{ p: 2.5, mb: 3, borderColor: "primary.main" }}>
+            <Stack spacing={2}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}>
+                <Box>
+                  <Typography variant="overline" color="primary.main">VOTO ENCONTRADO</Typography>
+                  <Typography sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>{searchedVote.voteId}</Typography>
+                </Box>
+                <Button variant="text" startIcon={<VisibilityOutlined />} onClick={() => setSelectedVote(searchedVote)}>
+                  Ver voto cifrado
+                </Button>
+              </Stack>
               <Box>
-                <Typography variant="overline" color="primary.main">REGISTRO ENCONTRADO</Typography>
-                <Typography sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>{searchedVote.voteId}</Typography>
+                <Typography variant="caption" color="text.secondary">Digesto del voto cifrado (SHA3-384)</Typography>
+                <Typography sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>
+                  {voteDigests[searchedVote.voteId] ?? "Calculando digesto…"}
+                </Typography>
               </Box>
-              <Button variant="outlined" startIcon={<VisibilityOutlined />} onClick={() => setSelectedVote(searchedVote)}>
-                Ver registro
-              </Button>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Firma digital</Typography>
+                <Typography sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}>{truncateValue(searchedVote.signature, 32)}</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">
+                Tu selección permanece cifrada: el tablón solo permite comprobar que tu voto fue registrado y que está autorizado.
+              </Typography>
+              <VoteVerificationPanel key={searchedVote.voteId} electionId={electionId} vote={searchedVote} />
             </Stack>
           </Paper>
         )}
@@ -245,6 +284,7 @@ function BulletinBoardPage() {
                   {selectedVote.signature}
                 </Box>
               </Box>
+              {electionId && <VoteVerificationPanel key={selectedVote.voteId} electionId={electionId} vote={selectedVote} />}
             </Stack>
           )}
         </DialogContent>

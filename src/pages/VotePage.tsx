@@ -410,7 +410,7 @@ function VotePage() {
                             registeredAt: registration.registeredAt,
                             digest: authorizedVote.signedVote.digest,
                             signature: authorizedVote.signedVote.signature,
-                            bulletinUrl: `${window.location.origin}/vote/${election.electionId}/bulletin`,
+                            bulletinUrl: `${window.location.origin}/vote/${election.electionId}/bulletin?voteId=${encodeURIComponent(registration.voteId!)}`,
                           })
                         }
                       >
