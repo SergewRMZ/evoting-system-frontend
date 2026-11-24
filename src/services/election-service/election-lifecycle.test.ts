@@ -18,7 +18,7 @@ vi.mock("../authorization-service/authorization.api", () => ({
   default: { createKeys: vi.fn(), activateKeys: vi.fn(), getPublicKey: vi.fn() },
 }));
 vi.mock("../tally-service/tally-service.api", () => ({
-  default: { createKeys: vi.fn(), activateKeys: vi.fn(), getPublicKey: vi.fn(), tallyElection: vi.fn() },
+  default: { createKeys: vi.fn(), activateKeys: vi.fn(), getPublicKey: vi.fn(), tallyElection: vi.fn(), expireKeys: vi.fn() },
 }));
 
 const httpError = (status: number, title?: string) => ({
@@ -37,6 +37,7 @@ const mocked = {
   tallyActivate: vi.mocked(tallyServiceApi.activateKeys),
   tallyPublic: vi.mocked(tallyServiceApi.getPublicKey),
   tally: vi.mocked(tallyServiceApi.tallyElection),
+  tallyExpire: vi.mocked(tallyServiceApi.expireKeys),
 };
 
 const run = async (definitions: ReturnType<typeof buildValidationSteps>, initial?: OperationStep[]) => {
@@ -150,7 +151,7 @@ describe("activación", () => {
   });
 
   it("no vuelve a habilitar claves que ya están activas", async () => {
-    mocked.authPublic.mockResolvedValue({} as never);
+    mocked.authPublic.mockResolvedValue({ keyStatus: "ACTIVE" } as never);
     mocked.tallyPublic.mockResolvedValue({ status: "ACTIVE" } as never);
 
     const { completed, steps } = await run(buildActivationSteps("e1", "ACTIVE"));
@@ -188,14 +189,16 @@ describe("escrutinio", () => {
   it("contabiliza los votos y después finaliza la elección", async () => {
     const order: string[] = [];
     mocked.tally.mockImplementation(async () => { order.push("tally"); return []; });
+    mocked.tallyExpire.mockImplementation(async () => { order.push("expire"); return {} as never; });
     mocked.finish.mockImplementation(async () => { order.push("finish"); return {} as never; });
 
     const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
 
     expect(completed).toBe(true);
-    expect(order).toEqual(["tally", "finish"]);
+    expect(order).toEqual(["tally", "expire", "finish"]);
+    expect(mocked.tallyExpire).toHaveBeenCalledWith("e1");
     expect(mocked.finish).toHaveBeenCalledWith("e1");
-    expect(steps.map((step) => step.status)).toEqual(["done", "done"]);
+    expect(steps.map((step) => step.status)).toEqual(["done", "done", "done"]);
   });
 
   it("no finaliza la elección si el conteo falla", async () => {
@@ -204,12 +207,14 @@ describe("escrutinio", () => {
     const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
 
     expect(completed).toBe(false);
+    expect(mocked.tallyExpire).not.toHaveBeenCalled();
     expect(mocked.finish).not.toHaveBeenCalled();
     expect(steps[1].status).toBe("pending");
   });
 
   it("al reintentar tras fallar la finalización no vuelve a contar", async () => {
     mocked.tally.mockResolvedValue([]);
+    mocked.tallyExpire.mockResolvedValue({} as never);
     mocked.finish.mockRejectedValueOnce(httpError(500));
     const definitions = buildTallySteps("e1", "CLOSED");
     const first = await run(definitions);
@@ -220,17 +225,19 @@ describe("escrutinio", () => {
 
     expect(retry.completed).toBe(true);
     expect(mocked.tally).toHaveBeenCalledTimes(1);
+    expect(mocked.tallyExpire).toHaveBeenCalledTimes(1);
     expect(mocked.finish).toHaveBeenCalledTimes(2);
   });
 
   it("omite la finalización si la elección ya estaba finalizada", async () => {
     mocked.tally.mockResolvedValue([]);
+    mocked.tallyExpire.mockResolvedValue({} as never);
 
     const { completed, steps } = await run(buildTallySteps("e1", "FINISHED"));
 
     expect(completed).toBe(true);
     expect(mocked.finish).not.toHaveBeenCalled();
-    expect(steps[1].status).toBe("skipped");
+    expect(steps[2].status).toBe("skipped");
   });
 
   it("omite el paso si otro intento ya terminó el conteo", async () => {
@@ -244,6 +251,32 @@ describe("escrutinio", () => {
 
     expect(completed).toBe(true);
     expect(steps[0].status).toBe("skipped");
+  });
+
+  it("omite la expiración si las claves de cifrado ya estaban expiradas", async () => {
+    mocked.tally.mockResolvedValue([]);
+    mocked.finish.mockResolvedValue({} as never);
+    mocked.tallyExpire.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { code: "KEYS_ALREADY_EXPIRED" } },
+    });
+
+    const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
+
+    expect(completed).toBe(true);
+    expect(steps[1].status).toBe("skipped");
+    expect(mocked.finish).toHaveBeenCalledWith("e1");
+  });
+
+  it("no finaliza la elección si falla la expiración de las claves de cifrado", async () => {
+    mocked.tally.mockResolvedValue([]);
+    mocked.tallyExpire.mockRejectedValue(httpError(500));
+
+    const { completed, steps } = await run(buildTallySteps("e1", "CLOSED"));
+
+    expect(completed).toBe(false);
+    expect(steps[1].status).toBe("error");
+    expect(mocked.finish).not.toHaveBeenCalled();
   });
 
   it("no confunde otros conflictos con un conteo ya terminado", async () => {

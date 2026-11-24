@@ -17,6 +17,12 @@ const tallyServiceApi = {
         return response.data;
     },
 
+    /** Expira las claves de cifrado; tally-service solo lo permite cuando la elección ya tiene resultados. */
+    expireKeys: async (electionId: string): Promise<EncryptionKey> => {
+        const response = await apiClient.patch(`/api/tally-service/elections/${encodeURIComponent(electionId)}/encryption-keys/expire`);
+        return response.data;
+    },
+
     tallyElection: async (electionId: string): Promise<ElectionTallyResult[]> => {
         const response = await apiClient.post(`/api/tally-service/elections/${encodeURIComponent(electionId)}/tallies`);
         return response.data;

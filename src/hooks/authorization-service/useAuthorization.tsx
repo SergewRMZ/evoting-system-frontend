@@ -6,7 +6,7 @@ import { createBlindedVoteMessage, unblindVote } from "../../utils/voting/vote.u
 import type { ElectionDetails } from "../../services/election-service/election.types";
 import { Uint8ArrayToBase64 } from "../../crypto/crypto.utils";
 import type { AuthorizedVote } from "../../types/vote.types";
-import { getApiErrorMessage } from "../../errors/apiErrorMap";
+import { getApiErrorMessage, getProblemTitle } from "../../errors/apiErrorMap";
 
 const useAuthorization = () => {
     const[loading, setLoading] = useState(false);
@@ -60,6 +60,14 @@ const useAuthorization = () => {
                 blindSignature: data.blindSignature,
             };
         }   catch(error) {
+            // El servicio de autorización también responde 409 cuando la votación ya terminó:
+            // no debe confundirse con "ya solicitaste tu autorización".
+            if (getProblemTitle(error) === "Election Not Active") {
+                throw new Error(
+                    "La votación de esta elección ya no está activa. No es posible autorizar tu voto.",
+                    { cause: error }
+                );
+            }
             throw new Error(
                 getApiErrorMessage(error, "authorization", "No se pudo autorizar el voto."),
                 { cause: error }

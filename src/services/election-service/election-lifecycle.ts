@@ -52,6 +52,9 @@ export const isEncryptionKeyAlreadyCreated = (error: unknown) => getHttpStatus(e
 /** tally-service lo indica cuando otro intento ya terminó el conteo de la elección. */
 export const isElectionAlreadyTallied = (error: unknown) => getProblemCode(error) === "ELECTION_ALREADY_TALLIED";
 
+/** tally-service lo indica cuando las claves de cifrado ya se habían expirado. */
+export const isEncryptionKeyAlreadyExpired = (error: unknown) => getProblemCode(error) === "KEYS_ALREADY_EXPIRED";
+
 export function buildValidationSteps(electionId: string, status: ElectionStatus): StepDefinition[] {
   return [
     {
@@ -108,10 +111,11 @@ export function buildActivationSteps(electionId: string, status: ElectionStatus)
       label: "Habilitar las claves de autorización existentes",
       errorContext: "authorization",
       run: async () => {
-        // La llave pública solo se publica cuando está ACTIVE: si responde, ya está habilitada.
+        // La llave pública se publica cuando está ACTIVE o EXPIRED; una CREATED responde 404.
         try {
-          await authorizationServiceApi.getPublicKey(electionId);
-          return { skipped: "Las claves ya estaban habilitadas." };
+          const key = await authorizationServiceApi.getPublicKey(electionId);
+          if (key.keyStatus === "ACTIVE") return { skipped: "Las claves ya estaban habilitadas." };
+          return { skipped: "Las claves ya expiraron; no se pueden habilitar de nuevo." };
         } catch (error) {
           if (getHttpStatus(error) !== 404) throw error;
         }
@@ -143,6 +147,20 @@ export function buildTallySteps(electionId: string, status: ElectionStatus): Ste
           await tallyServiceApi.tallyElection(electionId);
         } catch (error) {
           if (isElectionAlreadyTallied(error)) return { skipped: "La elección ya estaba contabilizada." };
+          throw error;
+        }
+      },
+    },
+    {
+      id: "expire-encryption-keys",
+      label: "Expirar las claves de cifrado",
+      errorContext: "tally",
+      run: async () => {
+        // Va después del conteo: a partir de aquí la clave privada ya no se vuelve a usar.
+        try {
+          await tallyServiceApi.expireKeys(electionId);
+        } catch (error) {
+          if (isEncryptionKeyAlreadyExpired(error)) return { skipped: "Las claves ya estaban expiradas." };
           throw error;
         }
       },
