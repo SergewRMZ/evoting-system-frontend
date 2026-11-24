@@ -110,7 +110,7 @@ describe("validación", () => {
   });
 
   it("trata las claves ya existentes como resueltas sin regenerarlas", async () => {
-    mocked.authCreate.mockRejectedValue(httpError(503, "Created Key Conflict"));
+    mocked.authCreate.mockRejectedValue(httpError(409, "Created Key Conflict"));
     mocked.tallyCreate.mockRejectedValue(httpError(409));
 
     const { completed, steps } = await run(buildValidationSteps("e1", "VERIFIED"));

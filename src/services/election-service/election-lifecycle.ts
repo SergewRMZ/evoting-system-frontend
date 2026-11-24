@@ -42,9 +42,9 @@ export const toInitialSteps = (definitions: StepDefinition[]): OperationStep[] =
 
 const AUTH_KEY_EXISTS_TITLE = "Created Key Conflict";
 
-/** authorization-service responde 503 + "Created Key Conflict" cuando la llave ya existe. */
+/** authorization-service responde 409 + "Created Key Conflict" cuando la llave ya existe. */
 export const isAuthorizationKeyAlreadyCreated = (error: unknown) =>
-  getHttpStatus(error) === 503 && getProblemTitle(error) === AUTH_KEY_EXISTS_TITLE;
+  getHttpStatus(error) === 409 && getProblemTitle(error) === AUTH_KEY_EXISTS_TITLE;
 
 /** tally-service responde 409 cuando las llaves de cifrado ya existen. */
 export const isEncryptionKeyAlreadyCreated = (error: unknown) => getHttpStatus(error) === 409;
